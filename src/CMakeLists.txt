@@ -6,7 +6,10 @@ add_executable(Playground
     vk_engine.h
     vk_types.h
     vk_initializers.cpp
-    vk_initializers.h)
+    vk_initializers.h
+    Defines.h
+    RingBuffer.cpp
+    RingBuffer.h)
 
 
 set_property(TARGET Playground PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:Playground>")
