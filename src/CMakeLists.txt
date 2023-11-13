@@ -7,6 +7,7 @@ add_executable(Playground
     vk_types.h
     vk_initializers.cpp
     vk_initializers.h
+    vk_pipeline.cpp
     vk_pipeline.h
     Defines.h
     RingBuffer.cpp

@@ -1,6 +1,5 @@
 ﻿// vulkan_guide.h : Include file for standard system include files,
 // or project specific include files.
-
 #pragma once
 
 #include <vk_types.h>
@@ -12,6 +11,16 @@ namespace vkinit {
 
 	VkCommandBufferAllocateInfo commandBufferAllocateInfo(VkCommandPool pool, uint32_t count = 1, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
+	VkPipelineShaderStageCreateInfo pipelineShaderStageCreateInfo(VkShaderStageFlagBits stage, VkShaderModule shaderModule);
 
+	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo();
+
+	VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo(VkPrimitiveTopology topology);
+
+	VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo(VkPolygonMode polygonMode);
+
+	VkPipelineMultisampleStateCreateInfo multisamplingStateCreateInfo();
+
+	VkPipelineColorBlendAttachmentState colorBlendAttachmentState();
 }
 

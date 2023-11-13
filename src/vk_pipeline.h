@@ -5,9 +5,10 @@
 class PipelineBuilder
 {
 public:
-	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
+	VkPipeline buildPipeline(VkDevice device, VkRenderPass pass);
 
 private:
+
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo;
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly;
@@ -17,7 +18,5 @@ private:
 	VkPipelineColorBlendAttachmentState colorBlendAttachment;
 	VkPipelineMultisampleStateCreateInfo multisampling;
 	VkPipelineLayout pipelineLayout;
-
-	
 };
 
