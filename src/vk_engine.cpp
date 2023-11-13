@@ -21,12 +21,12 @@ void VulkanEngine::init()
 
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 	
-	_window = SDL_CreateWindow(
+	window = SDL_CreateWindow(
 		"Vulkan Engine",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
-		_windowExtent.width,
-		_windowExtent.height,
+		windowExtent.width,
+		windowExtent.height,
 		window_flags
 	);
 	
@@ -40,11 +40,11 @@ void VulkanEngine::init()
 	initPipeline();
 
 	//everything went fine
-	_isInitialized = true;
+	isInitialized = true;
 }
 void VulkanEngine::cleanup()
 {	
-	if (_isInitialized) {
+	if (isInitialized) {
 		vkDeviceWaitIdle(device);
 		ringBuffer.cleanUp();
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -70,7 +70,7 @@ void VulkanEngine::cleanup()
 		vkb::destroy_debug_utils_messenger(instance, debugMessenger);
 		vkDestroyInstance(instance, nullptr);
 
-		SDL_DestroyWindow(_window);
+		SDL_DestroyWindow(window);
 	}
 }
 
@@ -116,7 +116,7 @@ void VulkanEngine::draw()
 	rpInfo.renderPass = renderPass;
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
-	rpInfo.renderArea.extent = _windowExtent;
+	rpInfo.renderArea.extent = windowExtent;
 	rpInfo.framebuffer = frameBuffers[swapchainImageIndex];
 
 	//connect clear values
@@ -255,7 +255,7 @@ void VulkanEngine::initVulkan()
 
 
 	// device
-	SDL_Vulkan_CreateSurface(_window, instance, &surface);
+	SDL_Vulkan_CreateSurface(window, instance, &surface);
 
 	//use vkbootstrap to select a GPU.
 	//We want a GPU that can write to the SDL surface and supports Vulkan 1.1
@@ -285,7 +285,7 @@ void VulkanEngine::initSwapchain()
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder.use_default_format_selection()
 												  .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-												  .set_desired_extent(_windowExtent.width, _windowExtent.height)
+												  .set_desired_extent(windowExtent.width, windowExtent.height)
 												  .build()
 												  .value();
 	
@@ -306,12 +306,12 @@ void VulkanEngine::initCommands()
 	{
 		//create a command pool for commands submitted to the graphics queue.
 	//we also want the pool to allow for resetting of individual command buffers
-		VkCommandPoolCreateInfo commandPoolInfo = vkinit::command_pool_create_info(graphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+		VkCommandPoolCreateInfo commandPoolInfo = vkinit::commandPoolCreateInfo(graphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
 		VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool[i]));
 
 		//allocate the default command buffer that we will use for rendering
-		VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::command_buffer_allocate_info(commandPool[i], 1);
+		VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::commandBufferAllocateInfo(commandPool[i], 1);
 
 		VK_CHECK(vkAllocateCommandBuffers(device, &cmdAllocInfo, &mainCommandBuffer[i]));
 	}
@@ -375,8 +375,8 @@ void VulkanEngine::initFrameBuffers()
 
 	fb_info.renderPass = renderPass;
 	fb_info.attachmentCount = 1;
-	fb_info.width = _windowExtent.width;
-	fb_info.height = _windowExtent.height;
+	fb_info.width = windowExtent.width;
+	fb_info.height = windowExtent.height;
 	fb_info.layers = 1;
 
 	//grab how many images we have in the swapchain

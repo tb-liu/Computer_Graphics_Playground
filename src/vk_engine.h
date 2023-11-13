@@ -10,12 +10,12 @@
 class VulkanEngine {
 public:
 
-	bool _isInitialized{ false };
+	bool isInitialized{ false };
 	int frameNumber {0};
 
-	VkExtent2D _windowExtent{ 1700 , 900 };
+	VkExtent2D windowExtent{ 1700 , 900 };
 
-	struct SDL_Window* _window{ nullptr };
+	struct SDL_Window* window{ nullptr };
 
 	//initializes everything in the engine
 	void init();
