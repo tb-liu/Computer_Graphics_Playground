@@ -22,7 +22,7 @@ void VulkanEngine::init()
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 	
 	window = SDL_CreateWindow(
-		"Vulkan Engine",
+		"Playground",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
 		windowExtent.width,
