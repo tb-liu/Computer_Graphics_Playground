@@ -59,6 +59,7 @@ private:
 
 	VkPipelineLayout trianglePipelineLayout;
 	VkPipeline trianglePipeline;
+	VkPipeline redTrianglePipeline;
 
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);

@@ -13,8 +13,13 @@
 #include <fstream>
 #include "Defines.h"
 #include "vk_pipeline.h"
+
 const int MAX_FRAMES_IN_FLIGHT = 1;
+const int MAX_SHADER_COUNT = 2;
 int CURRENT_FRAME = 0;
+int SELECTED_SHADER = 0;
+
+
 void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
@@ -128,9 +133,16 @@ void VulkanEngine::draw()
 
 	//once we start adding rendering commands, they will go here
 
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
+	
+	if (SELECTED_SHADER == 0)
+	{
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
+	}
+	else
+	{
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, redTrianglePipeline);
+	}
 	vkCmdDraw(cmd, 3, 1, 0, 0);
-
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
@@ -195,6 +207,18 @@ void VulkanEngine::run()
 		{
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT) bQuit = true;
+			else if (e.type == SDL_KEYDOWN) 
+			{
+				// esacpe key to exit program
+				if (e.key.keysym.sym == SDLK_ESCAPE) bQuit = true;
+				// use space key to switch shader
+				if (e.key.keysym.sym == SDLK_SPACE) 
+				{
+					SELECTED_SHADER += 1;
+					SELECTED_SHADER %= MAX_SHADER_COUNT;
+				}
+				
+			}
 		}
 
 		draw();
@@ -425,6 +449,23 @@ void VulkanEngine::initPipeline()
 		std::cout << "Triangle vertex shader successfully loaded" << std::endl;
 	}
 
+	VkShaderModule redtriangleFragShader;
+	if (!load_shader_module("../../shaders/colorTriangle.frag.spv", &redtriangleFragShader))
+	{
+		std::cout << "Error when building the triangle fragment shader module" << std::endl;
+	}
+	else {
+		std::cout << "Triangle fragment shader successfully loaded" << std::endl;
+	}
+
+	VkShaderModule redtriangleVertexShader;
+	if (!load_shader_module("../../shaders/colorTriangle.vert.spv", &redtriangleVertexShader))
+	{
+		std::cout << "Error when building the triangle vertex shader module" << std::endl;
+	}
+	else {
+		std::cout << "Triangle vertex shader successfully loaded" << std::endl;
+	}
 	//build the pipeline layout that controls the inputs/outputs of the shader
 	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = vkinit::pipelineLayoutCreateInfo();
@@ -471,5 +512,18 @@ void VulkanEngine::initPipeline()
 
 	//finally build the pipeline
 	trianglePipeline = pipelineBuilder.buildPipeline(device, renderPass);
+
+	// other shader
+
+	//clear the shader stages for the builder
+	pipelineBuilder.shaderStages.clear();
+
+	//add the other shaders
+	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, redtriangleVertexShader));
+
+	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, redtriangleFragShader));
+
+	//build the red triangle pipeline
+	redTrianglePipeline = pipelineBuilder.buildPipeline(device, renderPass);
 }
 
