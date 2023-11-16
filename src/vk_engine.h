@@ -5,7 +5,10 @@
 #include <vk_types.h>
 #include <vector>
 
+#include "DeletionQueue.h"
 #include "RingBuffer.h"
+
+
 
 class VulkanEngine {
 public:
@@ -52,17 +55,21 @@ private:
 
 	// render pass
 	VkRenderPass renderPass;
-	std::vector<VkFramebuffer> frameBuffers;
+	std::vector<VkFramebuffer> framebuffers;
 
 	// Sync Object
 	RingSyncObjects ringBuffer;
 
+	// pipeline related things
 	VkPipelineLayout trianglePipelineLayout;
 	VkPipeline trianglePipeline;
 	VkPipeline redTrianglePipeline;
 
+	// deletion queue
+	DeletionQueue deletionQueue;
+
 	//loads a shader module from a spir-v file. Returns false if it errors
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+	bool loadShaderModule(const char* filePath, VkShaderModule* outShaderModule);
 	
 
 	void initVulkan();

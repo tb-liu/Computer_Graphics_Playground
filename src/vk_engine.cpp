@@ -25,7 +25,7 @@ void VulkanEngine::init()
 	// We initialize SDL and create a window with it. 
 	SDL_Init(SDL_INIT_VIDEO);
 
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
+	SDL_WindowFlags windowFlags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 	
 	window = SDL_CreateWindow(
 		"Playground",
@@ -33,7 +33,7 @@ void VulkanEngine::init()
 		SDL_WINDOWPOS_UNDEFINED,
 		windowExtent.width,
 		windowExtent.height,
-		window_flags
+		windowFlags
 	);
 	
 	// vulkan init
@@ -53,23 +53,8 @@ void VulkanEngine::cleanup()
 	if (isInitialized) {
 		vkDeviceWaitIdle(device);
 		ringBuffer.cleanUp();
-		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-		{
-			vkDestroyCommandPool(device, commandPool[i], nullptr);
-			
-		}
-		vkDestroySwapchainKHR(device, swapchain, nullptr);
-		vkDestroyRenderPass(device, renderPass, nullptr);
-
-		for (size_t i = 0; i < frameBuffers.size(); i++)
-		{
-			vkDestroyFramebuffer(device, frameBuffers[i], nullptr);
-		}
 		
-		for (size_t i = 0; i < swapchainImageViews.size(); i++)
-		{
-			vkDestroyImageView(device, swapchainImageViews[i], nullptr);
-		}
+		deletionQueue.flush();
 
 		vkDestroyDevice(device, nullptr);
 		vkDestroySurfaceKHR(instance, surface, nullptr);
@@ -123,7 +108,7 @@ void VulkanEngine::draw()
 	rpInfo.renderArea.offset.x = 0;
 	rpInfo.renderArea.offset.y = 0;
 	rpInfo.renderArea.extent = windowExtent;
-	rpInfo.framebuffer = frameBuffers[swapchainImageIndex];
+	rpInfo.framebuffer = framebuffers[swapchainImageIndex];
 
 	//connect clear values
 	rpInfo.clearValueCount = 1;
@@ -135,13 +120,9 @@ void VulkanEngine::draw()
 
 	
 	if (SELECTED_SHADER == 0)
-	{
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
-	}
 	else
-	{
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, redTrianglePipeline);
-	}
 	vkCmdDraw(cmd, 3, 1, 0, 0);
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
@@ -225,7 +206,7 @@ void VulkanEngine::run()
 	}
 }
 
-bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outShaderModule)
+bool VulkanEngine::loadShaderModule(const char* filePath, VkShaderModule* outShaderModule)
 {
 	//open the file. With cursor at the end
 	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
@@ -326,6 +307,9 @@ void VulkanEngine::initSwapchain()
 	swapchainImageViews = vkbSwapchain.get_image_views().value();
 
 	swapchainImageFormat = vkbSwapchain.image_format;
+
+	// destory function
+	deletionQueue.pushFunction([=]() { vkDestroySwapchainKHR(device, swapchain, nullptr); });
 }
 
 void VulkanEngine::initCommands()
@@ -345,6 +329,7 @@ void VulkanEngine::initCommands()
 		VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::commandBufferAllocateInfo(commandPool[i], 1);
 
 		VK_CHECK(vkAllocateCommandBuffers(device, &cmdAllocInfo, &mainCommandBuffer[i]));
+		deletionQueue.pushFunction([=]() { vkDestroyCommandPool(device, commandPool[i], nullptr); });
 	}
 	
 
@@ -353,72 +338,75 @@ void VulkanEngine::initCommands()
 void VulkanEngine::initDefaultRenderpass()
 {
 	// the renderpass will use this color attachment.
-	VkAttachmentDescription color_attachment = {};
+	VkAttachmentDescription colorAttachment = {};
 	//the attachment will have the format needed by the swapchain
-	color_attachment.format = swapchainImageFormat;
+	colorAttachment.format = swapchainImageFormat;
 	//1 sample, we won't be doing MSAA
-	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	// we Clear when this attachment is loaded
-	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	// we keep the attachment stored when the renderpass ends
-	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	//we don't care about stencil
-	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 	//we don't know or care about the starting layout of the attachment
-	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	//after the renderpass ends, the image has to be on a layout ready for display
-	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-	VkAttachmentReference color_attachment_ref = {};
+	VkAttachmentReference colorAttachmentRef = {};
 	//attachment number will index into the pAttachments array in the parent renderpass itself
-	color_attachment_ref.attachment = 0;
-	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachmentRef.attachment = 0;
+	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	//we are going to create 1 subpass, which is the minimum you can do
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &color_attachment_ref;
+	subpass.pColorAttachments = &colorAttachmentRef;
 
-	VkRenderPassCreateInfo render_pass_info = {};
-	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	VkRenderPassCreateInfo renderPassInfo = {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 
 	//connect the color attachment to the info
-	render_pass_info.attachmentCount = 1;
-	render_pass_info.pAttachments = &color_attachment;
+	renderPassInfo.attachmentCount = 1;
+	renderPassInfo.pAttachments = &colorAttachment;
 	//connect the subpass to the info
-	render_pass_info.subpassCount = 1;
-	render_pass_info.pSubpasses = &subpass;
+	renderPassInfo.subpassCount = 1;
+	renderPassInfo.pSubpasses = &subpass;
 
 
-	VK_CHECK(vkCreateRenderPass(device, &render_pass_info, nullptr, &renderPass));
+	VK_CHECK(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
+	deletionQueue.pushFunction([=]() { vkDestroyRenderPass(device, renderPass, nullptr); });
 }
 
 void VulkanEngine::initFrameBuffers()
 {
 	//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
-	VkFramebufferCreateInfo fb_info = {};
-	fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	fb_info.pNext = nullptr;
+	VkFramebufferCreateInfo frambufferInfo = {};
+	frambufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	frambufferInfo.pNext = nullptr;
 
-	fb_info.renderPass = renderPass;
-	fb_info.attachmentCount = 1;
-	fb_info.width = windowExtent.width;
-	fb_info.height = windowExtent.height;
-	fb_info.layers = 1;
+	frambufferInfo.renderPass = renderPass;
+	frambufferInfo.attachmentCount = 1;
+	frambufferInfo.width = windowExtent.width;
+	frambufferInfo.height = windowExtent.height;
+	frambufferInfo.layers = 1;
 
 	//grab how many images we have in the swapchain
-	const uint32_t swapchain_imagecount = swapchainImages.size();
-	frameBuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
+	const uint32_t swapchainImagecount = swapchainImages.size();
+	framebuffers = std::vector<VkFramebuffer>(swapchainImagecount);
 
 	//create framebuffers for each of the swapchain image views
-	for (int i = 0; i < swapchain_imagecount; i++) {
+	for (int i = 0; i < swapchainImagecount; i++) {
 
-		fb_info.pAttachments = &swapchainImageViews[i];
-		VK_CHECK(vkCreateFramebuffer(device, &fb_info, nullptr, &frameBuffers[i]));
+		frambufferInfo.pAttachments = &swapchainImageViews[i];
+		VK_CHECK(vkCreateFramebuffer(device, &frambufferInfo, nullptr, &framebuffers[i]));
+		deletionQueue.pushFunction([=]() { vkDestroyFramebuffer(device, framebuffers[i], nullptr);
+										   vkDestroyImageView(device, swapchainImageViews[i], nullptr); });
 	}
 
 }
@@ -432,7 +420,7 @@ void VulkanEngine::initPipeline()
 {
 	// TODO: make this a macro or function
 	VkShaderModule triangleFragShader;
-	if (!load_shader_module("../../shaders/triangle.frag.spv", &triangleFragShader))
+	if (!loadShaderModule("../../shaders/triangle.frag.spv", &triangleFragShader))
 	{
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
@@ -441,7 +429,7 @@ void VulkanEngine::initPipeline()
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!load_shader_module("../../shaders/triangle.vert.spv", &triangleVertexShader))
+	if (!loadShaderModule("../../shaders/triangle.vert.spv", &triangleVertexShader))
 	{
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
@@ -450,7 +438,7 @@ void VulkanEngine::initPipeline()
 	}
 
 	VkShaderModule redtriangleFragShader;
-	if (!load_shader_module("../../shaders/colorTriangle.frag.spv", &redtriangleFragShader))
+	if (!loadShaderModule("../../shaders/colorTriangle.frag.spv", &redtriangleFragShader))
 	{
 		std::cout << "Error when building the triangle fragment shader module" << std::endl;
 	}
@@ -459,7 +447,7 @@ void VulkanEngine::initPipeline()
 	}
 
 	VkShaderModule redtriangleVertexShader;
-	if (!load_shader_module("../../shaders/colorTriangle.vert.spv", &redtriangleVertexShader))
+	if (!loadShaderModule("../../shaders/colorTriangle.vert.spv", &redtriangleVertexShader))
 	{
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;
 	}
@@ -525,5 +513,17 @@ void VulkanEngine::initPipeline()
 
 	//build the red triangle pipeline
 	redTrianglePipeline = pipelineBuilder.buildPipeline(device, renderPass);
+
+	// destroy all shader modules
+	vkDestroyShaderModule(device, redtriangleVertexShader, nullptr);
+	vkDestroyShaderModule(device, redtriangleFragShader, nullptr);
+	vkDestroyShaderModule(device, triangleFragShader, nullptr);
+	vkDestroyShaderModule(device, triangleVertexShader, nullptr);
+
+									  // destroy the 2 pipelines we have created
+	deletionQueue.pushFunction([=]() { vkDestroyPipeline(device, redTrianglePipeline, nullptr);
+									   vkDestroyPipeline(device, trianglePipeline, nullptr);
+									  // destroy the pipeline layout that they use
+									   vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr); });
 }
 

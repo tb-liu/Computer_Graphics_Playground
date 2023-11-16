@@ -2,9 +2,8 @@
 #include <vk_types.h>
 #include <vector>
 
-class PipelineBuilder
+struct PipelineBuilder
 {
-public:
 	VkPipeline buildPipeline(VkDevice device, VkRenderPass pass);
 
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
