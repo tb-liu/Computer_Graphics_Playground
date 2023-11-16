@@ -57,6 +57,9 @@ private:
 	// Sync Object
 	RingSyncObjects ringBuffer;
 
+	VkPipelineLayout trianglePipelineLayout;
+	VkPipeline trianglePipeline;
+
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 	

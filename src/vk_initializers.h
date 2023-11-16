@@ -22,5 +22,7 @@ namespace vkinit {
 	VkPipelineMultisampleStateCreateInfo multisamplingStateCreateInfo();
 
 	VkPipelineColorBlendAttachmentState colorBlendAttachmentState();
+
+	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo();
 }
 

@@ -7,8 +7,6 @@ class PipelineBuilder
 public:
 	VkPipeline buildPipeline(VkDevice device, VkRenderPass pass);
 
-private:
-
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo;
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly;

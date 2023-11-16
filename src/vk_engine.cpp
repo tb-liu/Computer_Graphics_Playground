@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include "Defines.h"
+#include "vk_pipeline.h"
 const int MAX_FRAMES_IN_FLIGHT = 1;
 int CURRENT_FRAME = 0;
 void VulkanEngine::init()
@@ -124,6 +125,12 @@ void VulkanEngine::draw()
 	rpInfo.pClearValues = &clearValue;
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	//once we start adding rendering commands, they will go here
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
+	vkCmdDraw(cmd, 3, 1, 0, 0);
+
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
@@ -417,5 +424,52 @@ void VulkanEngine::initPipeline()
 	else {
 		std::cout << "Triangle vertex shader successfully loaded" << std::endl;
 	}
+
+	//build the pipeline layout that controls the inputs/outputs of the shader
+	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo = vkinit::pipelineLayoutCreateInfo();
+
+	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &trianglePipelineLayout));
+
+	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
+	PipelineBuilder pipelineBuilder;
+
+	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
+
+	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+
+
+	//vertex input controls how to read vertices from vertex buffers. We aren't using it yet
+	pipelineBuilder.vertexInputInfo = vkinit::vertexInputStateCreateInfo();
+
+	//input assembly is the configuration for drawing triangle lists, strips, or individual points.
+	//we are just going to draw triangle list
+	pipelineBuilder.inputAssembly = vkinit::inputAssemblyCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+	//build viewport and scissor from the swapchain extents
+	pipelineBuilder.viewport.x = 0.0f;
+	pipelineBuilder.viewport.y = 0.0f;
+	pipelineBuilder.viewport.width = (float)windowExtent.width;
+	pipelineBuilder.viewport.height = (float)windowExtent.height;
+	pipelineBuilder.viewport.minDepth = 0.0f;
+	pipelineBuilder.viewport.maxDepth = 1.0f;
+
+	pipelineBuilder.scissor.offset = { 0, 0 };
+	pipelineBuilder.scissor.extent = windowExtent;
+
+	//configure the rasterizer to draw filled triangles
+	pipelineBuilder.rasterizer = vkinit::rasterizationStateCreateInfo(VK_POLYGON_MODE_FILL);
+
+	//we don't use multisampling, so just run the default one
+	pipelineBuilder.multisampling = vkinit::multisamplingStateCreateInfo();
+
+	//a single blend attachment with no blending and writing to RGBA
+	pipelineBuilder.colorBlendAttachment = vkinit::colorBlendAttachmentState();
+
+	//use the triangle layout we created
+	pipelineBuilder.pipelineLayout = trianglePipelineLayout;
+
+	//finally build the pipeline
+	trianglePipeline = pipelineBuilder.buildPipeline(device, renderPass);
 }
 
