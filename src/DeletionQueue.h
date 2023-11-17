@@ -3,7 +3,7 @@
 #include <deque>
 #include <functional>
 
-// a painless way to destory everything
+// make my life easier
 struct DeletionQueue
 {
 	std::deque<std::function<void()>> deletors;

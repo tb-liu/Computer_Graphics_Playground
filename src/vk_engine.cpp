@@ -1,4 +1,5 @@
 ﻿
+#define VMA_IMPLEMENTATION
 #include "vk_engine.h"
 
 #include <SDL.h>
@@ -13,6 +14,8 @@
 #include <fstream>
 #include "Defines.h"
 #include "vk_pipeline.h"
+
+
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
 const int MAX_SHADER_COUNT = 2;
@@ -51,15 +54,20 @@ void VulkanEngine::init()
 void VulkanEngine::cleanup()
 {	
 	if (isInitialized) {
+		// wait for all things to finish
 		vkDeviceWaitIdle(device);
+		// destroy sync objects
 		ringBuffer.cleanUp();
-		
+
 		deletionQueue.flush();
 
 		vkDestroyDevice(device, nullptr);
 		vkDestroySurfaceKHR(instance, surface, nullptr);
 		vkb::destroy_debug_utils_messenger(instance, debugMessenger);
 		vkDestroyInstance(instance, nullptr);
+
+		// destory allocator
+		vmaDestroyAllocator(allocator);
 
 		SDL_DestroyWindow(window);
 	}
@@ -169,7 +177,6 @@ void VulkanEngine::draw()
 	presentInfo.pImageIndices = &swapchainImageIndex;
 
 	VK_CHECK(vkQueuePresentKHR(graphicsQueue, &presentInfo));
-	// reset fence
 	
 	//increase the number of frames drawn
 	frameNumber++;
@@ -242,9 +249,8 @@ bool VulkanEngine::loadShaderModule(const char* filePath, VkShaderModule* outSha
 
 	//check that the creation goes well.
 	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+	if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) 
 		return false;
-	}
 	*outShaderModule = shaderModule;
 	return true;
 }
@@ -270,7 +276,7 @@ void VulkanEngine::initVulkan()
 	SDL_Vulkan_CreateSurface(window, instance, &surface);
 
 	//use vkbootstrap to select a GPU.
-	//We want a GPU that can write to the SDL surface and supports Vulkan 1.1
+	//We want a GPU that can write to the SDL surface and supports Vulkan 1.3
 	vkb::PhysicalDeviceSelector selector{ vkbInst };
 	vkb::PhysicalDevice physicalDevice = selector.set_minimum_version(1, 3)
 												 .set_surface(surface)
@@ -289,6 +295,13 @@ void VulkanEngine::initVulkan()
 	// use vkbootstrap to get a Graphics queue
 	graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+	// initialize the memory allocator
+	VmaAllocatorCreateInfo allocatorInfo{};
+	allocatorInfo.physicalDevice = gpuDevice;
+	allocatorInfo.device = device;
+	allocatorInfo.instance = instance;
+	vmaCreateAllocator(&allocatorInfo, &allocator);
 }
 
 void VulkanEngine::initSwapchain()

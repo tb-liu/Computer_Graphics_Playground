@@ -4,6 +4,7 @@
 #pragma once
 #include <vk_types.h>
 #include <vector>
+#include <vk_mem_alloc.h>
 
 #include "DeletionQueue.h"
 #include "RingBuffer.h"
@@ -67,6 +68,9 @@ private:
 
 	// deletion queue
 	DeletionQueue deletionQueue;
+
+	// memory allocator
+	VmaAllocator allocator;
 
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool loadShaderModule(const char* filePath, VkShaderModule* outShaderModule);

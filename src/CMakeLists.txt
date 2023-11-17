@@ -14,6 +14,8 @@ add_executable(Playground
     RingBuffer.h
     DeletionQueue.cpp
     DeletionQueue.h
+    Mesh.cpp
+    Mesh.h
     )
 
 
