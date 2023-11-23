@@ -268,6 +268,14 @@ void VulkanEngine::loadShaderWrapper(std::string shaderName, VkShaderModule* out
 	}
 }
 
+void VulkanEngine::loadMeshes()
+{
+	monkeyMesh.loadFromOBJ("../../assets/monkey_smooth.obj");
+
+	// upload the mesh to GPU
+	uploadMesh(monkeyMesh);
+}
+
 void VulkanEngine::uploadMesh(Mesh& mesh)
 {
 	//allocate vertex buffer
@@ -477,11 +485,11 @@ void VulkanEngine::initPipeline()
 	VkShaderModule triangleFragShader;
 	loadShaderWrapper("triangle.frag", &triangleFragShader);
 
-	VkShaderModule redtriangleVertexShader;
-	loadShaderWrapper("colorTriangle.vert", &redtriangleVertexShader);
+	VkShaderModule redTriangleVertShader;
+	loadShaderWrapper("colorTriangle.vert", &redTriangleVertShader);
 
-	VkShaderModule redtriangleFragShader;
-	loadShaderWrapper("colorTriangle.frag", &redtriangleFragShader);
+	VkShaderModule redTriangleFragShader;
+	loadShaderWrapper("colorTriangle.frag", &redTriangleFragShader);
 
 	//build the pipeline layout that controls the inputs/outputs of the shader
 	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
@@ -536,23 +544,53 @@ void VulkanEngine::initPipeline()
 	pipelineBuilder.shaderStages.clear();
 
 	//add the other shaders
-	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, redtriangleVertexShader));
+	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, redTriangleVertShader));
 
-	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, redtriangleFragShader));
+	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
 
 	//build the red triangle pipeline
 	redTrianglePipeline = pipelineBuilder.buildPipeline(device, renderPass);
 
-	// destroy all shader modules
-	vkDestroyShaderModule(device, redtriangleVertexShader, nullptr);
-	vkDestroyShaderModule(device, redtriangleFragShader, nullptr);
+
+
+
+
+	// build the mesh pipeline
+	VertexInputDescription vertexDescription = Vertex::getVertexDescription();
+
+	// connect the pipeline builder vertex input info to the one we get from Vertex
+	pipelineBuilder.vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
+	pipelineBuilder.vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
+
+	pipelineBuilder.vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
+	pipelineBuilder.vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
+
+	// clear the shader stages for the builder
+	pipelineBuilder.shaderStages.clear();
+
+	// load mesh vertex shader
+	VkShaderModule meshVertShader;
+	loadShaderWrapper("triMesh.vert", &meshVertShader);
+
+	// add the other shaders
+	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
+	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+
+	//build the mesh triangle pipeline
+	meshPipeline = pipelineBuilder.buildPipeline(device, renderPass);
+
+	//deleting all of the vulkan shaders
+	vkDestroyShaderModule(device, meshVertShader, nullptr);
+	vkDestroyShaderModule(device, redTriangleVertShader, nullptr);
+	vkDestroyShaderModule(device, redTriangleFragShader, nullptr);
 	vkDestroyShaderModule(device, triangleFragShader, nullptr);
 	vkDestroyShaderModule(device, triangleVertexShader, nullptr);
 
-									  // destroy the 2 pipelines we have created
+	// destroy the 2 pipelines we have created
 	deletionQueue.pushFunction([=]() { vkDestroyPipeline(device, redTrianglePipeline, nullptr);
 									   vkDestroyPipeline(device, trianglePipeline, nullptr);
-									  // destroy the pipeline layout that they use
+									   vkDestroyPipeline(device, meshPipeline, nullptr);
+									   // destroy the pipeline layout that they use
 									   vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr); });
 }
 

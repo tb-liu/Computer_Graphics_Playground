@@ -65,6 +65,7 @@ private:
 	VkPipelineLayout trianglePipelineLayout;
 	VkPipeline trianglePipeline;
 	VkPipeline redTrianglePipeline;
+	VkPipeline meshPipeline;
 
 	// deletion queue
 	DeletionQueue deletionQueue;
@@ -72,12 +73,16 @@ private:
 	// memory allocator
 	VmaAllocator allocator;
 
+	// mesh objects
+	Mesh monkeyMesh;
+
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool loadShaderModule(const char* filePath, VkShaderModule* outShaderModule);
 	// a wrapper function for loading shader
 	void loadShaderWrapper(std::string shaderName, VkShaderModule* outShaderModule);
 
 	// mesh functions
+	void loadMeshes();
 	void uploadMesh(Mesh & mesh);
 
 	void initVulkan();
