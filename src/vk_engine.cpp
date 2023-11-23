@@ -255,6 +255,46 @@ bool VulkanEngine::loadShaderModule(const char* filePath, VkShaderModule* outSha
 	return true;
 }
 
+void VulkanEngine::loadShaderWrapper(std::string shaderName, VkShaderModule* outShaderModule)
+{
+	std::string path = "../../shaders/" + shaderName + ".spv";
+
+	if (!loadShaderModule(path.c_str(), outShaderModule))
+	{
+		std::cout << "Error when building the " + shaderName + "shader module" << std::endl;
+	}
+	else {
+		std::cout << shaderName + " successfully loaded" << std::endl;
+	}
+}
+
+void VulkanEngine::uploadMesh(Mesh& mesh)
+{
+	//allocate vertex buffer
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = mesh.vertices.size() * sizeof(Vertex);
+	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+
+	// let the VMA library know that this data should be writeable by CPU, but also readable by GPU
+	VmaAllocationCreateInfo vmaAllocInfo = {};
+	vmaAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+	// allocate the buffer
+	VK_CHECK(vmaCreateBuffer(allocator, &bufferInfo, &vmaAllocInfo, &mesh.vertexBuffer.buffer, &mesh.vertexBuffer.allocation, nullptr));
+
+	// add the destruction of triangle mesh buffer to the deletion queue
+	deletionQueue.pushFunction([=]() { vmaDestroyBuffer(allocator, mesh.vertexBuffer.buffer, mesh.vertexBuffer.allocation); });
+
+	// copy the data to gpu
+	// It is possible to keep the pointer mapped and not unmap it immediately, but that is an advanced technique mostly used for streaming data, which we don’t need right now.
+	void * data;
+	vmaMapMemory(allocator, mesh.vertexBuffer.allocation, &data);
+	memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
+	vmaUnmapMemory(allocator, mesh.vertexBuffer.allocation);
+}
+
 void VulkanEngine::initVulkan()
 {
 	vkb::InstanceBuilder builder;
@@ -431,42 +471,18 @@ void VulkanEngine::initSyncStructures()
 
 void VulkanEngine::initPipeline()
 {
-	// TODO: make this a macro or function
-	VkShaderModule triangleFragShader;
-	if (!loadShaderModule("../../shaders/triangle.frag.spv", &triangleFragShader))
-	{
-		std::cout << "Error when building the triangle fragment shader module" << std::endl;
-	}
-	else {
-		std::cout << "Triangle fragment shader successfully loaded" << std::endl;
-	}
-
 	VkShaderModule triangleVertexShader;
-	if (!loadShaderModule("../../shaders/triangle.vert.spv", &triangleVertexShader))
-	{
-		std::cout << "Error when building the triangle vertex shader module" << std::endl;
-	}
-	else {
-		std::cout << "Triangle vertex shader successfully loaded" << std::endl;
-	}
+	loadShaderWrapper("triangle.vert", &triangleVertexShader);
 
-	VkShaderModule redtriangleFragShader;
-	if (!loadShaderModule("../../shaders/colorTriangle.frag.spv", &redtriangleFragShader))
-	{
-		std::cout << "Error when building the triangle fragment shader module" << std::endl;
-	}
-	else {
-		std::cout << "Triangle fragment shader successfully loaded" << std::endl;
-	}
+	VkShaderModule triangleFragShader;
+	loadShaderWrapper("triangle.frag", &triangleFragShader);
 
 	VkShaderModule redtriangleVertexShader;
-	if (!loadShaderModule("../../shaders/colorTriangle.vert.spv", &redtriangleVertexShader))
-	{
-		std::cout << "Error when building the triangle vertex shader module" << std::endl;
-	}
-	else {
-		std::cout << "Triangle vertex shader successfully loaded" << std::endl;
-	}
+	loadShaderWrapper("colorTriangle.vert", &redtriangleVertexShader);
+
+	VkShaderModule redtriangleFragShader;
+	loadShaderWrapper("colorTriangle.frag", &redtriangleFragShader);
+
 	//build the pipeline layout that controls the inputs/outputs of the shader
 	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = vkinit::pipelineLayoutCreateInfo();

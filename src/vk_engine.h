@@ -8,7 +8,7 @@
 
 #include "DeletionQueue.h"
 #include "RingBuffer.h"
-
+#include "Mesh.h"
 
 
 class VulkanEngine {
@@ -74,7 +74,11 @@ private:
 
 	//loads a shader module from a spir-v file. Returns false if it errors
 	bool loadShaderModule(const char* filePath, VkShaderModule* outShaderModule);
-	
+	// a wrapper function for loading shader
+	void loadShaderWrapper(std::string shaderName, VkShaderModule* outShaderModule);
+
+	// mesh functions
+	void uploadMesh(Mesh & mesh);
 
 	void initVulkan();
 	void initSwapchain();
