@@ -18,7 +18,7 @@
 
 
 const int MAX_FRAMES_IN_FLIGHT = 1;
-const int MAX_SHADER_COUNT = 2;
+const int MAX_SHADER_COUNT = 3;
 int CURRENT_FRAME = 0;
 int SELECTED_SHADER = 0;
 
@@ -47,7 +47,7 @@ void VulkanEngine::init()
 	initFrameBuffers();
 	initSyncStructures();
 	initPipeline();
-
+	loadMeshes();
 	//everything went fine
 	isInitialized = true;
 }
@@ -61,13 +61,13 @@ void VulkanEngine::cleanup()
 
 		deletionQueue.flush();
 
+		// destory allocator
+		vmaDestroyAllocator(allocator);
+
 		vkDestroyDevice(device, nullptr);
 		vkDestroySurfaceKHR(instance, surface, nullptr);
 		vkb::destroy_debug_utils_messenger(instance, debugMessenger);
 		vkDestroyInstance(instance, nullptr);
-
-		// destory allocator
-		vmaDestroyAllocator(allocator);
 
 		SDL_DestroyWindow(window);
 	}
@@ -122,16 +122,31 @@ void VulkanEngine::draw()
 	rpInfo.clearValueCount = 1;
 	rpInfo.pClearValues = &clearValue;
 
+	// begin render pass
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	//once we start adding rendering commands, they will go here
-
 	
-	if (SELECTED_SHADER == 0)
+	if (SELECTED_SHADER == 0) 
+	{
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
-	else
+		vkCmdDraw(cmd, 3, 1, 0, 0);
+	}
+	else if (SELECTED_SHADER == 1) 
+	{
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, redTrianglePipeline);
-	vkCmdDraw(cmd, 3, 1, 0, 0);
+		vkCmdDraw(cmd, 3, 1, 0, 0);
+	}
+	else
+	{
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline);
+		//bind the mesh vertex buffer with offset 0
+		VkDeviceSize offset = 0;
+		vkCmdBindVertexBuffers(cmd, 0, 1, &monkeyMesh.vertexBuffer.buffer, &offset);
+		//we can now draw the mesh
+		vkCmdDraw(cmd, monkeyMesh.vertices.size(), 1, 0, 0);
+	}
+		
+	
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
 	//finalize the command buffer (we can no longer add commands, but it can now be executed)
@@ -574,7 +589,7 @@ void VulkanEngine::initPipeline()
 
 	// add the other shaders
 	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
-	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
+	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
 
 	//build the mesh triangle pipeline
 	meshPipeline = pipelineBuilder.buildPipeline(device, renderPass);
