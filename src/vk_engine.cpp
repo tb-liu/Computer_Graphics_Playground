@@ -384,8 +384,32 @@ void VulkanEngine::initSwapchain()
 
 	swapchainImageFormat = vkbSwapchain.image_format;
 
+	//depth image size will match the window
+	VkExtent3D depthImageExtent = { windowExtent.width, windowExtent.height, 1 };
+
+	//hardcoding the depth format to 32 bit float
+	depthFormat = VK_FORMAT_D32_SFLOAT;
+
+	//the depth image will be an image with the format we selected and Depth Attachment usage flag
+	VkImageCreateInfo dimgInfo = vkinit::imageCreateInfo(depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
+
+	//for the depth image, we want to allocate it from GPU local memory
+	VmaAllocationCreateInfo dimg_allocinfo = {};
+	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	dimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	//allocate and create the image
+	vmaCreateImage(allocator, &dimgInfo, &dimg_allocinfo, &depthImage.image, &depthImage.allocation, nullptr);
+
+	//build an image-view for the depth image to use for rendering
+	VkImageViewCreateInfo dviewInfo = vkinit::imageviewCreateInfo(depthFormat, depthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+	VK_CHECK(vkCreateImageView(device, &dviewInfo, nullptr, &depthImageView));
+
 	// destory function
-	deletionQueue.pushFunction([=]() { vkDestroySwapchainKHR(device, swapchain, nullptr); });
+	deletionQueue.pushFunction([=]() { vkDestroyImageView(device, depthImageView, nullptr);
+									   vmaDestroyImage(allocator, depthImage.image, depthImage.allocation);
+									   vkDestroySwapchainKHR(device, swapchain, nullptr); });
 }
 
 void VulkanEngine::initCommands()
