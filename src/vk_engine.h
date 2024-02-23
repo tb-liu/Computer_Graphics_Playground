@@ -10,6 +10,12 @@
 #include "RingBuffer.h"
 #include "Mesh.h"
 
+struct UniformBuffer
+{
+	glm::mat4 proj;
+	glm::mat4 view;
+	glm::mat4 model;
+};
 
 class VulkanEngine {
 public:

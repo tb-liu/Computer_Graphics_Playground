@@ -63,7 +63,6 @@ void VulkanEngine::cleanup()
 
 		// destory allocator
 		vmaDestroyAllocator(allocator);
-
 		vkDestroyDevice(device, nullptr);
 		vkDestroySurfaceKHR(instance, surface, nullptr);
 		vkb::destroy_debug_utils_messenger(instance, debugMessenger);
