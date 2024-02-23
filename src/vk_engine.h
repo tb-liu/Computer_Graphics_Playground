@@ -52,7 +52,11 @@ private:
 	VkFormat swapchainImageFormat;
 	std::vector<VkImage> swapchainImages;
 	std::vector<VkImageView> swapchainImageViews;
+	VkImageView depthImageView;
+	AllocatedImage depthImage;
 
+	//the format for the depth image
+	VkFormat depthFormat;
 	// vulkan command buffer & graphics queue
 	VkQueue graphicsQueue; //queue we will submit to
 	uint32_t graphicsQueueFamily; //family of that queue
