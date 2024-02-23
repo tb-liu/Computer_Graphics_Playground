@@ -16,6 +16,9 @@ add_executable(Playground
     DeletionQueue.h
     Mesh.cpp
     Mesh.h
+    SystemBase.h
+    Camera.h
+    Camera.cpp
     )
 
 
