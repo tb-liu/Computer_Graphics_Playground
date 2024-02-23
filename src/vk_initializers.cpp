@@ -172,3 +172,18 @@ VkImageViewCreateInfo vkinit::imageviewCreateInfo(VkFormat format, VkImage image
 
 	return info;
 }
+
+VkPipelineDepthStencilStateCreateInfo vkinit::depthStencilCreateInfo(bool depthTest, bool depthWrite, VkCompareOp compareOp)
+{
+	VkPipelineDepthStencilStateCreateInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	info.pNext = NULL;
+
+	info.depthTestEnable = depthTest ? VK_TRUE : VK_FALSE;
+	info.depthWriteEnable = depthWrite ? VK_TRUE : VK_FALSE;
+	info.depthCompareOp = depthTest ? compareOp : VK_COMPARE_OP_ALWAYS;
+	info.depthBoundsTestEnable = VK_FALSE;
+	info.stencilTestEnable = VK_FALSE;
+
+	return info;
+}

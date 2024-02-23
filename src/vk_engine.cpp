@@ -105,6 +105,11 @@ void VulkanEngine::draw()
 	float flash = abs(sin(frameNumber / 120.f));
 	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
 
+	//clear depth at 1
+	VkClearValue depthClear;
+	depthClear.depthStencil.depth = 1.f;
+
+	VkClearValue clearValues[] = { clearValue, depthClear };
 	//start the main renderpass.
 	//We will use the clear color from above, and the framebuffer of the index the swapchain gave us
 	VkRenderPassBeginInfo rpInfo = {};
@@ -116,10 +121,10 @@ void VulkanEngine::draw()
 	rpInfo.renderArea.offset.y = 0;
 	rpInfo.renderArea.extent = windowExtent;
 	rpInfo.framebuffer = framebuffers[swapchainImageIndex];
-
 	//connect clear values
-	rpInfo.clearValueCount = 1;
-	rpInfo.pClearValues = &clearValue;
+	rpInfo.clearValueCount = 2;
+	rpInfo.pClearValues = &clearValues[0];
+
 
 	// begin render pass
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -393,12 +398,12 @@ void VulkanEngine::initSwapchain()
 	VkImageCreateInfo dimgInfo = vkinit::imageCreateInfo(depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
 
 	//for the depth image, we want to allocate it from GPU local memory
-	VmaAllocationCreateInfo dimg_allocinfo = {};
-	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-	dimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VmaAllocationCreateInfo dimgAllocinfo = {};
+	dimgAllocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	dimgAllocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	//allocate and create the image
-	vmaCreateImage(allocator, &dimgInfo, &dimg_allocinfo, &depthImage.image, &depthImage.allocation, nullptr);
+	vmaCreateImage(allocator, &dimgInfo, &dimgAllocinfo, &depthImage.image, &depthImage.allocation, nullptr);
 
 	//build an image-view for the depth image to use for rendering
 	VkImageViewCreateInfo dviewInfo = vkinit::imageviewCreateInfo(depthFormat, depthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -461,21 +466,60 @@ void VulkanEngine::initDefaultRenderpass()
 	colorAttachmentRef.attachment = 0;
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+	// create depth attachment
+	VkAttachmentDescription depthAttachment = {};
+	depthAttachment.flags = 0;
+	depthAttachment.format = depthFormat;
+	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference depthAttachmentRef = {};
+	//attachment number will index into the pAttachments array in the parent renderpass itself
+	depthAttachmentRef.attachment = 1;
+	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 	//we are going to create 1 subpass, which is the minimum you can do
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
+	subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+	VkAttachmentDescription attachments[2] = { colorAttachment, depthAttachment };
+
+	VkSubpassDependency dependecy = {};
+	dependecy.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependecy.dstSubpass = 0;
+	dependecy.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependecy.srcAccessMask = 0;
+	dependecy.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependecy.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+	VkSubpassDependency depthDependency = {};
+	depthDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	depthDependency.dstSubpass = 0;
+	depthDependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depthDependency.srcAccessMask = 0;
+	depthDependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depthDependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+	VkSubpassDependency dependencies[2] = { dependecy, depthDependency };
 
 	VkRenderPassCreateInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-
 	//connect the color attachment to the info
-	renderPassInfo.attachmentCount = 1;
-	renderPassInfo.pAttachments = &colorAttachment;
+	renderPassInfo.attachmentCount = 2;
+	renderPassInfo.pAttachments = &attachments[0];
 	//connect the subpass to the info
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
+	renderPassInfo.dependencyCount = 2;
+	renderPassInfo.pDependencies = &dependencies[0];
 
 
 	VK_CHECK(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
@@ -485,25 +529,28 @@ void VulkanEngine::initDefaultRenderpass()
 void VulkanEngine::initFrameBuffers()
 {
 	//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
-	VkFramebufferCreateInfo frambufferInfo = {};
-	frambufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	frambufferInfo.pNext = nullptr;
+	VkFramebufferCreateInfo framebufferInfo = {};
+	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	framebufferInfo.pNext = nullptr;
 
-	frambufferInfo.renderPass = renderPass;
-	frambufferInfo.attachmentCount = 1;
-	frambufferInfo.width = windowExtent.width;
-	frambufferInfo.height = windowExtent.height;
-	frambufferInfo.layers = 1;
+	framebufferInfo.renderPass = renderPass;
+	framebufferInfo.attachmentCount = 1;
+	framebufferInfo.width = windowExtent.width;
+	framebufferInfo.height = windowExtent.height;
+	framebufferInfo.layers = 1;
 
 	//grab how many images we have in the swapchain
 	const uint32_t swapchainImagecount = swapchainImages.size();
 	framebuffers = std::vector<VkFramebuffer>(swapchainImagecount);
 
 	//create framebuffers for each of the swapchain image views
-	for (int i = 0; i < swapchainImagecount; i++) {
+	for (int i = 0; i < swapchainImagecount; i++) 
+	{
+		VkImageView attachments[2] = { swapchainImageViews[i], depthImageView };
+		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.attachmentCount = 2;
 
-		frambufferInfo.pAttachments = &swapchainImageViews[i];
-		VK_CHECK(vkCreateFramebuffer(device, &frambufferInfo, nullptr, &framebuffers[i]));
+		VK_CHECK(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffers[i]));
 		deletionQueue.pushFunction([=]() { vkDestroyFramebuffer(device, framebuffers[i], nullptr);
 										   vkDestroyImageView(device, swapchainImageViews[i], nullptr); });
 	}
@@ -572,6 +619,9 @@ void VulkanEngine::initPipeline()
 
 	//use the triangle layout we created
 	pipelineBuilder.pipelineLayout = trianglePipelineLayout;
+
+	// enable depth test
+	pipelineBuilder.depthStencil = vkinit::depthStencilCreateInfo(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
 	//finally build the pipeline
 	trianglePipeline = pipelineBuilder.buildPipeline(device, renderPass);
