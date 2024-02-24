@@ -17,7 +17,7 @@
 
 
 
-const int MAX_FRAMES_IN_FLIGHT = 1;
+const int MAX_FRAMES_IN_FLIGHT = 2;
 const int MAX_SHADER_COUNT = 3;
 int CURRENT_FRAME = 0;
 int SELECTED_SHADER = 0;
