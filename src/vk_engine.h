@@ -9,6 +9,7 @@
 #include "DeletionQueue.h"
 #include "RingBuffer.h"
 #include "Mesh.h"
+#include "SystemBase.h"
 
 struct UniformBuffer
 {
@@ -17,29 +18,30 @@ struct UniformBuffer
 	glm::mat4 model;
 };
 
-class VulkanEngine {
+class VulkanEngine : public SystemBase {
 public:
 
 	bool isInitialized{ false };
 	int frameNumber {0};
 
-	VkExtent2D windowExtent{ 800 , 600 };
+	
 
-	struct SDL_Window* window{ nullptr };
+	
 
 	//initializes everything in the engine
-	void init();
+	void init() override;
 
 	//shuts down the engine
-	void cleanup();
+	void shutdown() override;
 
 	//draw loop
-	void draw();
+	void update(float dt) override;
 
 	//run main loop
 	void run();
 private:
 
+	VkExtent2D windowExtent;
 	// basic vulkan
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debugMessenger;
