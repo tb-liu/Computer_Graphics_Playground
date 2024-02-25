@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 	
 	engine.run();	
 
-	engine.cleanup();	
+	engine.shutdown();	
 
 	return 0;
 }
