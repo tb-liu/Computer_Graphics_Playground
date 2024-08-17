@@ -56,9 +56,7 @@ void Camera::processInput(float deltaTime)
 }
 
 
-Camera::Camera(glm::vec3 pos = glm::vec3(0.f, 0.f, 0.f),
-    glm::vec3 up = glm::vec3(0.f, 1.f, 0.f),
-    float yaw_ = YAW, float pitch_ = PITCH)
+Camera::Camera(glm::vec3 pos, glm::vec3 up, float yaw_, float pitch_)
 {
     position = pos;
     worldUp = up;
@@ -110,7 +108,7 @@ void Camera::processCameraRotate(CameraRotate dir, float dt)
     updateCameraVector();
 }
 
-void Camera::processMouseMovement(float xoffset, float yoffset, bool constrainPitch = true)
+void Camera::processMouseMovement(float xoffset, float yoffset, bool constrainPitch)
 {
     xoffset *= mouseSensitivity;
     yoffset *= mouseSensitivity;

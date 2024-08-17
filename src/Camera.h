@@ -3,8 +3,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #define GLFW_INCLUDE_VULKAN
+#include "vk_engine.h" // TODO: change this to graphics class.
 
-enum CameraMovement {
+enum CameraMovement 
+{
     FORWARD,
     BACKWARD,
     LEFT,
@@ -26,6 +28,10 @@ const float SPEED = 15.5f;
 const float SENSITIVITY = 1.5f;
 const float ZOOM = 45.0f;
 
+// forward declaration
+class Graphics;
+
+// should only graphics component have access all its info. 
 class Camera : public SystemBase
 {
 public:
@@ -38,6 +44,17 @@ public:
         glm::vec3 up = glm::vec3(0.f, 1.f, 0.f),
         float yaw_ = YAW, float pitch_ = PITCH);
 
+    // declare Graphics as a friend of camera, Graphics need the view matrix
+    friend class Graphics;
+private:
+
+    glm::vec3 position, front, up, right, worldUp;
+    float yaw, pitch;
+    float movementSpeed, mouseSensitivity, zoom;
+
+    void updateCameraVector();
+    void processInput(float deltaTime);
+
     glm::mat4 getViewMatrix();
 
     void processKeys(CameraMovement dir, float dt);
@@ -49,22 +66,4 @@ public:
 
     // change the move speed
     void processMouseScroll(float yoffset);
-
-
-private:
-    glm::vec3 position, front, up, right, worldUp;
-    float yaw, pitch;
-    float movementSpeed, mouseSensitivity, zoom;
-
-    void updateCameraVector()
-    {
-        front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        front.y = sin(glm::radians(pitch));
-        front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        front = glm::normalize(front);
-        right = glm::normalize(glm::cross(front, worldUp));
-        up = glm::normalize(glm::cross(right, front));
-    }
-
-    void processInput(float deltaTime);
 };

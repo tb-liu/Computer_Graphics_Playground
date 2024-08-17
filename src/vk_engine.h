@@ -9,6 +9,7 @@
 #include "DeletionQueue.h"
 #include "RingBuffer.h"
 #include "Mesh.h"
+#include "SystemBase.h"
 
 struct UniformBuffer
 {
@@ -17,6 +18,7 @@ struct UniformBuffer
 	glm::mat4 model;
 };
 
+// TODO: change this to graphics class and only respones for rendering
 class VulkanEngine {
 public:
 
