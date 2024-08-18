@@ -11,6 +11,15 @@
 #include "Mesh.h"
 #include "SystemBase.h"
 
+
+namespace GraphicsGlobal 
+{
+	extern const int MAX_SHADER_COUNT;
+	extern int SELECTED_SHADER;
+}
+
+
+
 struct UniformBuffer
 {
 	glm::mat4 proj;
@@ -18,7 +27,10 @@ struct UniformBuffer
 	glm::mat4 model;
 };
 
-class VulkanEngine : public SystemBase {
+
+// TODO: change this to graphics class and only respones for rendering
+class VulkanEngine :public SystemBase {
+
 public:
 
 	bool isInitialized{ false };
@@ -35,10 +47,11 @@ public:
 	void shutdown() override;
 
 	//draw loop
-	void update(float dt) override;
 
-	//run main loop
-	void run();
+	void update(float) override;
+
+
+	SystemType Type() const override;
 private:
 
 	VkExtent2D windowExtent;

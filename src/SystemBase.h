@@ -1,9 +1,11 @@
 #pragma once
 
+// oder should follows the update order
 enum class SystemType : size_t
 {
-	GRAPHICS = 0,
+	INPUT = 0,
 	CAMERA,
+	GRAPHICS,
 	MAX
 };
 
@@ -14,6 +16,6 @@ class SystemBase
 		virtual void init() = 0;
 		virtual void update(float dt) = 0;
 		virtual void shutdown() = 0;
-
+		// tell what type of sub class it is
 		virtual SystemType Type() const = 0;
 };

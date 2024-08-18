@@ -1,169 +1,128 @@
-#include "Engine.h"
-#include "glm/glm.hpp"
-
-#include <SDL.h>
-#include <SDL_vulkan.h>
-
-// All systems here
+#include "engine.h"
 #include "Camera.h"
-// Initialization of the static window variable & the engine Instance pointer
-Engine* Engine::instancePtr = nullptr;
+#include "InputManager.h"
+#include "vk_engine.h"
+#include <SDL.h>
+#include <algorithm>
 
+Engine* Engine::instancePtr = nullptr;
 
 void Engine::init()
 {
+  for (SystemBase * sys : systems)
+      if (sys != nullptr)
+          sys->init();
 
-    for (SystemPtr sys : systems)
-    {
-        if (sys != nullptr)
-        {
-            sys->init();
-        }
-    }
 }
 
 void Engine::load()
 {
-    // We initialize SDL and create a window with it. 
-    SDL_Init(SDL_INIT_VIDEO);
+  // BEGIN: Add all the systems you want here
+  Camera* camera = new Camera(glm::vec3(9.0f, 20.0f, 45.f), glm::vec3(0, 1, 0), -90, 0);
+  InputManager* inputManager = new InputManager();
+  VulkanEngine* graphics = new VulkanEngine();
+  // END: Add all the systems you want here
 
-    SDL_WindowFlags windowFlags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
+  // Add the above systems to the systems array of the Engine
+  addSystem(camera, camera->Type());
+  addSystem(graphics, graphics->Type());
+  addSystem(inputManager, inputManager->Type());
 
-    window = SDL_CreateWindow(
-        "Playground",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
-        windowExtent.width,
-        windowExtent.height,
-        windowFlags
-    );
 
-    // Add the above systems to the systems array of the Engine
-    addSystem(camera, SystemType::CAMERA);
-    addSystem(graphics, SystemType::GRAPHICS);
+  // read the quit state from input class
+  bQuit = inputManager->getQuitState();
 
 }
 
 void Engine::update(float dt)
 {
-    SDL_Event e;
-    bool bQuit = false;
 
-    //main loop
-    while (!bQuit)
-    {
-        //Handle events on queue
-        while (SDL_PollEvent(&e) != 0)
-        {
-            //close the window when user alt-f4s or clicks the X button			
-            if (e.type == SDL_QUIT) bQuit = true;
-            else if (e.type == SDL_KEYDOWN)
-            {
-                // esacpe key to exit program
-                if (e.key.keysym.sym == SDLK_ESCAPE) bQuit = true;
-                // use space key to switch shader
-                // TODO: add a event system so other class can react to key press
-                /*if (e.key.keysym.sym == SDLK_SPACE)
-                {
-                    SELECTED_SHADER += 1;
-                    SELECTED_SHADER %= MAX_SHADER_COUNT;
-                }*/
+	SDL_Event e;
 
-            }
-        }
-
-        for (SystemPtr sys : systems)
-        {
-            if (sys != nullptr)
-            {
-                sys->update(dt);
-            }
-        }
-    }
-}
-
-void Engine::getDT(float& dt)
-{
-    // Get the end time of the last frame
-    frameEnd = static_cast<float>(glfwGetTime());
-    dt = frameEnd - frameBegin;
-
-    //Get the start time of the current frame
-    frameBegin = static_cast<float>(glfwGetTime());
-
-    dt = glm::clamp(dt, 0.0f, FrameCap);
+	//main loop
+	do
+	{
+		getDT(dt);
+		for (SystemBase * sys : systems)
+		{
+			if (sys != nullptr)
+				sys->update(dt);
+		}
+	} 
+	while (!*bQuit);
 }
 
 void Engine::unload()
 {
-    // shutdown all in reverse order
-    int lastSys = (int)systems.max_size() - 1;
-    for (int i = lastSys; i >= 0; --i)
-    {
-        if (systems[i] != nullptr)
-        {
-            systems[i]->shutdown();
-        }
-    }
-
-    Log::trace("Engine: Shutdown");
+	// shutdown all in reverse order
+	int lastSys = (int)systems.size() - 1;
+	for (int i = lastSys; i >= 0; --i)
+	{
+		if (systems[i] != nullptr)
+		{
+			systems[i]->shutdown();
+		}
+	}
 }
 
-void Engine::exit()
+void Engine::shutdown()
 {
-    // Once all systems are shutdown
-    // free them all in reverse order
-    int lastSys = (int)systems.max_size() - 1;
-    for (int i = lastSys; i >= 0; --i)
-    {
-        if (systems[i] != nullptr)
-        {
-            free(systems[i]);
-            systems[i] = nullptr;
-        }
-    }
-    Log::shutdown();
-    SDL_DestroyWindow(window);
+	// Once all systems are shutdown
+	// delete them all in reverse order
+	int lastSys = (int)systems.size() - 1;
+	for (int i = lastSys; i >= 0; --i)
+	{
+		if (systems[i] != nullptr)
+		{
+			delete systems[i];
+			systems[i] = nullptr;
+		}
+	}
 }
 
-Engine::Engine() :systems()
-{}
-
-Engine::~Engine()
+void Engine::addSystem(SystemBase* sys, SystemType type)
 {
-    free(instancePtr);
-    instancePtr = nullptr;
+	assert(static_cast<size_t>(type) < static_cast<size_t>(SystemType::MAX));
+	systems[static_cast<size_t>(type)] = sys;
 }
 
-// Used to set the window from anywhere
-void Engine::setWindow(GLFWwindow* win)
+SystemBase* Engine::getSystem(SystemType type)
 {
-    window = win;
-}
-
-void Engine::addSystem(SystemPtr sys, SystemType type)
-{
-    // Will do something better in the future here
-    assert(static_cast<size_t>(type) < static_cast<size_t>(SystemType::MAX));
-    systems[static_cast<size_t>(type)] = sys;
-}
-
-SystemPtr Engine::getSystem(SystemType type)
-{
-    return systems[static_cast<size_t>(type)];
+	return systems[static_cast<size_t>(type)];
 }
 
 Engine* Engine::getInstance()
 {
-    if (instancePtr == nullptr)
-    {
-        instancePtr = new Engine();
-    }
+	if (instancePtr == nullptr)
+		instancePtr = new Engine();
 
-    return instancePtr;
+	return instancePtr;
 }
 
-GLFWwindow* Engine::getWindow()
+Engine::Engine():bQuit(nullptr), systems()
 {
-    return window;
+	frameBegin = std::chrono::high_resolution_clock::now();
+}
+
+Engine::~Engine()
+{
+	delete instancePtr;
+	instancePtr = nullptr;
+}
+
+void Engine::getDT(float& dt)
+{
+	// Get the end time of the last frame
+	frameEnd = std::chrono::high_resolution_clock::now();
+
+	// Calculate the duration between frames
+	std::chrono::duration<float> duration = frameEnd - frameBegin;
+	dt = duration.count();
+
+	// Clamp the delta time to the frame cap
+	dt = std::clamp(dt, 0.0f, FrameCap);
+
+	// Get the start time of the current frame (for the next call)
+	frameBegin = frameEnd;
+
 }

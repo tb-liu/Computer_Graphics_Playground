@@ -19,8 +19,10 @@ add_executable(Playground
     SystemBase.h
     Camera.h
     Camera.cpp
-    engine.cpp
-    engine.h
+    Engine.cpp
+    Engine.h
+    InputManager.h
+    InputManager.cpp
     )
 
 
@@ -32,3 +34,4 @@ target_link_libraries(Playground vkbootstrap vma glm tinyobjloader imgui stb_ima
 target_link_libraries(Playground Vulkan::Vulkan sdl2)
 
 add_dependencies(Playground Shaders)
+ 
