@@ -2,8 +2,6 @@
 #define VMA_IMPLEMENTATION
 #include "vk_engine.h"
 
-#include <SDL.h>
-#include <SDL_vulkan.h>
 
 #include <vk_types.h>
 #include <vk_initializers.h>
@@ -25,19 +23,6 @@ int GraphicsGlobal::SELECTED_SHADER;
 
 void VulkanEngine::init()
 {
-	// We initialize SDL and create a window with it. 
-	SDL_Init(SDL_INIT_VIDEO);
-
-	SDL_WindowFlags windowFlags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
-	
-	window = SDL_CreateWindow(
-		"Playground",
-		SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED,
-		windowExtent.width,
-		windowExtent.height,
-		windowFlags
-	);
 	
 	// vulkan init
 	initVulkan();
@@ -69,7 +54,7 @@ void VulkanEngine::shutdown()
 		vkb::destroy_debug_utils_messenger(instance, debugMessenger);
 		vkDestroyInstance(instance, nullptr);
 
-		SDL_DestroyWindow(window);
+		
 	}
 }
 

@@ -4,6 +4,7 @@
 #include "SystemBase.h"
 #include <array>
 #include <chrono>
+
 class Engine
 {
 public:
@@ -32,8 +33,11 @@ private:
 #pragma region FrameRate
 	std::chrono::high_resolution_clock::time_point frameBegin;
 	std::chrono::high_resolution_clock::time_point frameEnd;
+
 	const float FrameCap = 1.0f / 240.f;
 
 	void getDT(float& dt);
 #pragma endregion FrameRate
+
 };
+

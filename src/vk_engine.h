@@ -27,16 +27,18 @@ struct UniformBuffer
 	glm::mat4 model;
 };
 
+
 // TODO: change this to graphics class and only respones for rendering
 class VulkanEngine :public SystemBase {
+
 public:
 
 	bool isInitialized{ false };
 	int frameNumber {0};
 
-	VkExtent2D windowExtent{ 800 , 600 };
+	
 
-	struct SDL_Window* window{ nullptr };
+	
 
 	//initializes everything in the engine
 	void init() override;
@@ -45,11 +47,14 @@ public:
 	void shutdown() override;
 
 	//draw loop
+
 	void update(float) override;
+
 
 	SystemType Type() const override;
 private:
 
+	VkExtent2D windowExtent;
 	// basic vulkan
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debugMessenger;
