@@ -17,14 +17,15 @@ void Engine::init()
 void Engine::load()
 {
     // BEGIN: Add all the systems you want here
-    //Graphics* graphics = new Graphics();
     Camera* camera = new Camera(glm::vec3(9.0f, 20.0f, 45.f), glm::vec3(0, 1, 0), -90, 0);
-    // END: Add all the systems you want here
 	InputManager* inputManager = new InputManager();
+	VulkanEngine* graphics = new VulkanEngine();
+    // END: Add all the systems you want here
+	
     // Add the above systems to the systems array of the Engine
-    addSystem(camera, SystemType::CAMERA);
-	addSystem(inputManager, SystemType::INPUT);
-    //addSystem(graphics, SystemType::GRAPHICS);
+    addSystem(camera, camera->Type());
+	addSystem(graphics, graphics->Type());
+	addSystem(inputManager, inputManager->Type());
 
 
 	// read the quit state from input class
@@ -61,7 +62,7 @@ void Engine::unload()
 	}
 }
 
-void Engine::exit()
+void Engine::shutdown()
 {
 	// Once all systems are shutdown
 	// delete them all in reverse order

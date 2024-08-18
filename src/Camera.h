@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #define GLFW_INCLUDE_VULKAN
-#include "vk_engine.h" // TODO: change this to graphics class.
+#include "vk_engine.h" 
 
 enum CameraMovement 
 {
@@ -29,7 +29,7 @@ const float SENSITIVITY = 1.5f;
 const float ZOOM = 45.0f;
 
 // forward declaration
-class Graphics;
+class VulkanEngine;
 
 // should only graphics component have access all its info. 
 class Camera : public SystemBase
@@ -45,7 +45,7 @@ public:
         float yaw_ = YAW, float pitch_ = PITCH);
 
     // declare Graphics as a friend of camera, Graphics need the view matrix
-    friend class Graphics;
+    friend class VulkanEngine;
 private:
 
     glm::vec3 position, front, up, right, worldUp;

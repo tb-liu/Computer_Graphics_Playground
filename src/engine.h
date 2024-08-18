@@ -11,7 +11,7 @@ public:
 	void load();
 	void update(float dt);
 	void unload();
-	void exit();
+	void shutdown();
 
 	
 	// delete copy ctor and assignment

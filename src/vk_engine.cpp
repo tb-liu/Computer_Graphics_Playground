@@ -51,9 +51,10 @@ void VulkanEngine::init()
 	//everything went fine
 	isInitialized = true;
 }
-void VulkanEngine::cleanup()
+void VulkanEngine::shutdown()
 {	
-	if (isInitialized) {
+	if (isInitialized) 
+	{
 		// wait for all things to finish
 		vkDeviceWaitIdle(device);
 		// destroy sync objects
@@ -72,8 +73,9 @@ void VulkanEngine::cleanup()
 	}
 }
 
-void VulkanEngine::draw()
+void VulkanEngine::update(float dt)
 {
+
 	// acqure next sync objects
 	SyncObject * nextSync = ringBuffer.getNextObject();
 	// wait until the GPU has finished rendering the last frame. Timeout of 1 second
@@ -135,7 +137,7 @@ void VulkanEngine::draw()
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
 		vkCmdDraw(cmd, 3, 1, 0, 0);
 	}
-	else if (SELECTED_SHADER == 1) 
+	else if (SELECTED_SHADER == 1)
 	{
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, redTrianglePipeline);
 		vkCmdDraw(cmd, 3, 1, 0, 0);
@@ -201,35 +203,9 @@ void VulkanEngine::draw()
 	frameNumber++;
 }
 
-void VulkanEngine::run()
+SystemType VulkanEngine::Type() const
 {
-	SDL_Event e;
-	bool bQuit = false;
-
-	//main loop
-	while (!bQuit)
-	{
-		//Handle events on queue
-		while (SDL_PollEvent(&e) != 0)
-		{
-			//close the window when user alt-f4s or clicks the X button			
-			if (e.type == SDL_QUIT) bQuit = true;
-			else if (e.type == SDL_KEYDOWN) 
-			{
-				// esacpe key to exit program
-				if (e.key.keysym.sym == SDLK_ESCAPE) bQuit = true;
-				// use space key to switch shader
-				if (e.key.keysym.sym == SDLK_SPACE) 
-				{
-					SELECTED_SHADER += 1;
-					SELECTED_SHADER %= MAX_SHADER_COUNT;
-				}
-				
-			}
-		}
-
-		draw();
-	}
+	return SystemType::GRAPHICS;
 }
 
 bool VulkanEngine::loadShaderModule(const char* filePath, VkShaderModule* outShaderModule)

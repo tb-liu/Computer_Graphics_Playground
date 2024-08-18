@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     engine->unload();
 
     // Then free the systems
-    engine->exit();
+    engine->shutdown();
 
     return 0;
 }

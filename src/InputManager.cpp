@@ -1,4 +1,5 @@
 #include "InputManager.h"
+#include "vk_engine.h"
 
 void InputManager::init()
 {
@@ -24,6 +25,12 @@ void InputManager::update(float)
 		else if (e.type == SDL_KEYUP)
 			keyboardStates[e.key.keysym.sym].released = true;
 	}
+	// if space pressed then change shader
+	/*if (auto it = keyboardStates.find(SDLK_SPACE); it != keyboardStates.end() && it->second.pressed)
+	{
+		SELECTED_SHADER += 1;
+		SELECTED_SHADER %= MAX_SHADER_COUNT;
+	}*/
 }
 
 void InputManager::shutdown()

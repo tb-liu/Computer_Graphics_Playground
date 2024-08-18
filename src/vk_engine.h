@@ -30,16 +30,15 @@ public:
 	struct SDL_Window* window{ nullptr };
 
 	//initializes everything in the engine
-	void init();
+	void init() override;
 
 	//shuts down the engine
-	void cleanup();
+	void shutdown() override;
 
 	//draw loop
-	void draw();
+	void update(float) override;
 
-	//run main loop
-	void run();
+	SystemType Type() const override;
 private:
 
 	// basic vulkan
