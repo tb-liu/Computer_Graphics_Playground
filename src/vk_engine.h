@@ -19,7 +19,7 @@ struct UniformBuffer
 };
 
 // TODO: change this to graphics class and only respones for rendering
-class Graphics:public SystemBase {
+class VulkanEngine :public SystemBase {
 public:
 
 	bool isInitialized{ false };

@@ -35,15 +35,6 @@ SystemType InputManager::Type() const
     return SystemType::INPUT;
 }
 
-inline const bool* InputManager::getQuitState()
-{
-	return &bQuit;
-}
-
-inline const std::map<SDL_Keycode, KeyStates>& InputManager::getKeyboardStates()
-{
-	return keyboardStates;
-}
 
 InputManager::InputManager():bQuit(false)
 {

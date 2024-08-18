@@ -3,7 +3,7 @@
 // Store each component and updates
 #include "SystemBase.h"
 #include <array>
-
+#include <chrono>
 class Engine
 {
 public:
@@ -30,8 +30,8 @@ private:
 	std::array<SystemBase*, static_cast<size_t>(SystemType::MAX)> systems;
 
 #pragma region FrameRate
-	float frameBegin = 0.0f;
-	float frameEnd = 0.0f;
+	std::chrono::high_resolution_clock::time_point frameBegin;
+	std::chrono::high_resolution_clock::time_point frameEnd;
 	const float FrameCap = 1.0f / 240.f;
 
 	void getDT(float& dt);

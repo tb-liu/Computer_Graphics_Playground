@@ -1,14 +1,23 @@
-#include <vk_engine.h>
+#include "engine.h"
 
 int main(int argc, char* argv[])
 {
-	VulkanEngine engine;
+	Engine * engine = Engine::getInstance();
 
-	engine.init();	
-	
-	engine.run();	
+    // Allocate all necessary systems
+    engine->load();
 
-	engine.cleanup();	
+    engine->init();
 
-	return 0;
+    // Frame end being passed in here
+    engine->update(0.f);
+
+    // If we make to here then we should 
+    // clean up allocated memory in each system
+    engine->unload();
+
+    // Then free the systems
+    engine->exit();
+
+    return 0;
 }

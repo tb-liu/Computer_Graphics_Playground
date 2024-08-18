@@ -17,8 +17,16 @@ public:
 	void update(float) override;
 	void shutdown() override;
 	SystemType Type() const override;
-	inline const bool* getQuitState();
-	inline const std::map<SDL_Keycode, KeyStates>& getKeyboardStates();
+
+	inline const bool* InputManager::getQuitState()
+	{
+		return &bQuit;
+	}
+
+	inline const std::map<SDL_Keycode, KeyStates>& InputManager::getKeyboardStates()
+	{
+		return keyboardStates;
+	}
 
 	InputManager();
 	~InputManager();

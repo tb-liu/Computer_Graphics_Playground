@@ -3,7 +3,7 @@
 #include "InputManager.h"
 #include "vk_engine.h"
 #include <SDL.h>
-#include <chrono>
+#include <algorithm>
 
 Engine* Engine::instancePtr = nullptr;
 
@@ -50,10 +50,30 @@ void Engine::update(float dt)
 
 void Engine::unload()
 {
+	// shutdown all in reverse order
+	int lastSys = (int)systems.size() - 1;
+	for (int i = lastSys; i >= 0; --i)
+	{
+		if (systems[i] != nullptr)
+		{
+			systems[i]->shutdown();
+		}
+	}
 }
 
 void Engine::exit()
 {
+	// Once all systems are shutdown
+	// delete them all in reverse order
+	int lastSys = (int)systems.size() - 1;
+	for (int i = lastSys; i >= 0; --i)
+	{
+		if (systems[i] != nullptr)
+		{
+			delete systems[i];
+			systems[i] = nullptr;
+		}
+	}
 }
 
 void Engine::addSystem(SystemBase* sys, SystemType type)
@@ -64,22 +84,40 @@ void Engine::addSystem(SystemBase* sys, SystemType type)
 
 SystemBase* Engine::getSystem(SystemType type)
 {
-    return nullptr;
+	return systems[static_cast<size_t>(type)];
 }
 
 Engine* Engine::getInstance()
 {
-    return nullptr;
+	if (instancePtr == nullptr)
+		instancePtr = new Engine();
+
+	return instancePtr;
 }
 
 Engine::Engine():bQuit(nullptr), systems()
 {
+	frameBegin = std::chrono::high_resolution_clock::now();
 }
 
 Engine::~Engine()
 {
+	delete instancePtr;
+	instancePtr = nullptr;
 }
 
 void Engine::getDT(float& dt)
 {
+	// Get the end time of the last frame
+	frameEnd = std::chrono::high_resolution_clock::now();
+
+	// Calculate the duration between frames
+	std::chrono::duration<float> duration = frameEnd - frameBegin;
+	dt = duration.count();
+
+	// Clamp the delta time to the frame cap
+	dt = std::clamp(dt, 0.0f, FrameCap);
+
+	// Get the start time of the current frame (for the next call)
+	frameBegin = frameEnd;
 }

@@ -19,8 +19,8 @@ add_executable(Playground
     SystemBase.h
     Camera.h
     Camera.cpp
-    engine.cpp
-    engine.h
+    Engine.cpp
+    Engine.h
     InputManager.h
     InputManager.cpp
     )
