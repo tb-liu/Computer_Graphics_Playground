@@ -26,11 +26,11 @@ void InputManager::update(float)
 			keyboardStates[e.key.keysym.sym].released = true;
 	}
 	// if space pressed then change shader
-	/*if (auto it = keyboardStates.find(SDLK_SPACE); it != keyboardStates.end() && it->second.pressed)
+	if (auto it = keyboardStates.find(SDLK_SPACE); it != keyboardStates.end() && it->second.pressed)
 	{
-		SELECTED_SHADER += 1;
-		SELECTED_SHADER %= MAX_SHADER_COUNT;
-	}*/
+		GraphicsGlobal::SELECTED_SHADER += 1;
+		GraphicsGlobal::SELECTED_SHADER %= GraphicsGlobal::MAX_SHADER_COUNT;
+	}
 }
 
 void InputManager::shutdown()

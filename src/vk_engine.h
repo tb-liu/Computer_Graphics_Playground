@@ -11,6 +11,15 @@
 #include "Mesh.h"
 #include "SystemBase.h"
 
+
+namespace GraphicsGlobal 
+{
+	extern const int MAX_SHADER_COUNT;
+	extern int SELECTED_SHADER;
+}
+
+
+
 struct UniformBuffer
 {
 	glm::mat4 proj;

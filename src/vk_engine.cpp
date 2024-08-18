@@ -18,10 +18,10 @@
 
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
-const int MAX_SHADER_COUNT = 3;
 int CURRENT_FRAME = 0;
-int SELECTED_SHADER = 0;
 
+const int GraphicsGlobal::MAX_SHADER_COUNT = 3;
+int GraphicsGlobal::SELECTED_SHADER;
 
 void VulkanEngine::init()
 {
@@ -132,12 +132,12 @@ void VulkanEngine::update(float dt)
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	
-	if (SELECTED_SHADER == 0) 
+	if (GraphicsGlobal::SELECTED_SHADER == 0)
 	{
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
 		vkCmdDraw(cmd, 3, 1, 0, 0);
 	}
-	else if (SELECTED_SHADER == 1)
+	else if (GraphicsGlobal::SELECTED_SHADER == 1)
 	{
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, redTrianglePipeline);
 		vkCmdDraw(cmd, 3, 1, 0, 0);
