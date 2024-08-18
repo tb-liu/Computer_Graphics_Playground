@@ -4,11 +4,24 @@
 #include <map>
 #include <SDL.h>
 
+
+
 struct KeyStates
 {
 	bool pressed, released;
 	KeyStates(bool press = false, bool release = false);
 };
+
+
+namespace InputGlobal
+{
+	extern std::map<SDL_Keycode, KeyStates> keyboardStates;
+	inline bool isKeyPressed(SDL_Keycode key)
+	{
+		auto it = InputGlobal::keyboardStates.find(key);
+		return it != InputGlobal::keyboardStates.end() && it->second.pressed;
+	}
+}
 
 class InputManager: public SystemBase
 {
@@ -23,10 +36,6 @@ public:
 		return &bQuit;
 	}
 
-	inline const std::map<SDL_Keycode, KeyStates>& InputManager::getKeyboardStates()
-	{
-		return keyboardStates;
-	}
 
 	InputManager();
 	~InputManager();
@@ -34,6 +43,5 @@ public:
 private:
 	// record exit event
 	bool bQuit;
-	std::map<SDL_Keycode, KeyStates> keyboardStates;
 };
 

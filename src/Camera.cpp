@@ -1,6 +1,6 @@
 #include "Camera.h"
 #include <SDL.h> // for reading keyboard input
-
+#include "InputManager.h"
 void Camera::init()
 {
     
