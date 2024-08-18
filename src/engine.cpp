@@ -9,34 +9,31 @@ Engine* Engine::instancePtr = nullptr;
 
 void Engine::init()
 {
-  for (SystemBase * sys : systems)
-      if (sys != nullptr)
-          sys->init();
-
+    for (SystemBase * sys : systems)
+        if (sys != nullptr)
+            sys->init();
 }
 
 void Engine::load()
 {
-  // BEGIN: Add all the systems you want here
-  Camera* camera = new Camera(glm::vec3(9.0f, 20.0f, 45.f), glm::vec3(0, 1, 0), -90, 0);
-  InputManager* inputManager = new InputManager();
-  VulkanEngine* graphics = new VulkanEngine();
-  // END: Add all the systems you want here
+    // BEGIN: Add all the systems you want here
+    Camera* camera = new Camera(glm::vec3(9.0f, 20.0f, 45.f), glm::vec3(0, 1, 0), -90, 0);
+	InputManager* inputManager = new InputManager();
+	VulkanEngine* graphics = new VulkanEngine();
+    // END: Add all the systems you want here
+	
+    // Add the above systems to the systems array of the Engine
+    addSystem(camera, camera->Type());
+	addSystem(graphics, graphics->Type());
+	addSystem(inputManager, inputManager->Type());
 
-  // Add the above systems to the systems array of the Engine
-  addSystem(camera, camera->Type());
-  addSystem(graphics, graphics->Type());
-  addSystem(inputManager, inputManager->Type());
 
-
-  // read the quit state from input class
-  bQuit = inputManager->getQuitState();
-
+	// read the quit state from input class
+	bQuit = inputManager->getQuitState();
 }
 
 void Engine::update(float dt)
 {
-
 	SDL_Event e;
 
 	//main loop
@@ -124,5 +121,4 @@ void Engine::getDT(float& dt)
 
 	// Get the start time of the current frame (for the next call)
 	frameBegin = frameEnd;
-
 }
