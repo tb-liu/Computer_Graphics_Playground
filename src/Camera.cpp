@@ -17,42 +17,22 @@ void Camera::shutdown()
 
 void Camera::processInput(float deltaTime)
 {
-    SDL_Event e;
-    /* Poll for events. SDL_PollEvent() returns 0 when there are no  */
-    /* more events on the event queue, our while loop will exit when */
-    /* that occurs.                                                  */
-    while (SDL_PollEvent(&e)) 
-    {
-        /* We are only worried about SDL_KEYDOWN and SDL_KEYUP events */
-        switch (e.type) {
-        case SDL_KEYDOWN:
-            printf("Key press detected\n");
-            if (e.key.keysym.sym == SDLK_w)
-                processKeys(CameraMovement::FORWARD, deltaTime);
-            if (e.key.keysym.sym == SDLK_s)
-                processKeys(CameraMovement::BACKWARD, deltaTime);
-            if (e.key.keysym.sym == SDLK_a)
-                processKeys(CameraMovement::LEFT, deltaTime);
-            if (e.key.keysym.sym == SDLK_d)
-                processKeys(CameraMovement::RIGHT, deltaTime);
-            if (e.key.keysym.sym == SDLK_LEFT)
-                processCameraRotate(CameraRotate::ROTATE_LEFT, deltaTime);
-            if (e.key.keysym.sym == SDLK_RIGHT)
-                processCameraRotate(CameraRotate::ROTATE_RIGHT, deltaTime);
-            if (e.key.keysym.sym == SDLK_UP)
-                processCameraRotate(CameraRotate::UP, deltaTime);
-            if (e.key.keysym.sym == SDLK_DOWN)
-                processCameraRotate(CameraRotate::DOWN, deltaTime);
-            break;
-
-        case SDL_KEYUP:
-            printf("Key release detected\n");
-            break;
-
-        default:
-            break;
-        }
-    }
+    if (InputGlobal::isKeyPressed(SDLK_w))
+        processKeys(CameraMovement::FORWARD, deltaTime);
+    if (InputGlobal::isKeyPressed(SDLK_s))
+        processKeys(CameraMovement::BACKWARD, deltaTime);
+    if (InputGlobal::isKeyPressed(SDLK_a))
+        processKeys(CameraMovement::LEFT, deltaTime);
+    if (InputGlobal::isKeyPressed(SDLK_d))
+        processKeys(CameraMovement::RIGHT, deltaTime);
+    if (InputGlobal::isKeyPressed(SDLK_LEFT))
+        processCameraRotate(CameraRotate::ROTATE_LEFT, deltaTime);
+    if (InputGlobal::isKeyPressed(SDLK_RIGHT))
+        processCameraRotate(CameraRotate::ROTATE_RIGHT, deltaTime);
+    if (InputGlobal::isKeyPressed(SDLK_UP))
+        processCameraRotate(CameraRotate::UP, deltaTime);
+    if (InputGlobal::isKeyPressed(SDLK_DOWN))
+        processCameraRotate(CameraRotate::DOWN, deltaTime);
 }
 
 
