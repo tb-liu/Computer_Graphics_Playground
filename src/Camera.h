@@ -38,7 +38,7 @@ public:
     void init() override;
     void update(float dt)override;
     void shutdown() override;
-    SystemType Type() const override { return SystemType::CAMERA; };
+    SystemType Type() const override;
 
     Camera(glm::vec3 pos = glm::vec3(0.f, 0.f, 0.f),
         glm::vec3 up = glm::vec3(0.f, 1.f, 0.f),

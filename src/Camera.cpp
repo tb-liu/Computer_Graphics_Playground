@@ -151,3 +151,8 @@ void Camera::updateCameraVector()
     right = glm::normalize(glm::cross(front, worldUp));
     up = glm::normalize(glm::cross(right, front));
 }
+
+SystemType Camera::Type() const 
+{ 
+    return SystemType::CAMERA; 
+}

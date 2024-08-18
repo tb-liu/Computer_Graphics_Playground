@@ -18,7 +18,7 @@ public:
 	Engine(const Engine& engine) = delete;
 	Engine& operator=(const Engine&) = delete;
 
-	void addSystem(SystemBase * sys, SystemType type);
+	void addSystem(SystemBase * sys, SystemType type); /* This will add the system base on its register order, look at SystemType for detail order */
 	SystemBase* getSystem(SystemType type);
 	static Engine* getInstance();
 
@@ -26,6 +26,7 @@ private:
 	Engine();
 	~Engine();
 	static Engine* instancePtr;
+	const bool* bQuit;
 	std::array<SystemBase*, static_cast<size_t>(SystemType::MAX)> systems;
 
 #pragma region FrameRate
