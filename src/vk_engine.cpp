@@ -22,7 +22,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 int CURRENT_FRAME = 0;
 
 const int GraphicsGlobal::MAX_SHADER_COUNT = 3;
-int GraphicsGlobal::SELECTED_SHADER;
+int GraphicsGlobal::SELECTED_SHADER = 2;
 
 void VulkanEngine::init()
 {

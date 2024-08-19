@@ -17,7 +17,7 @@ void Engine::init()
 void Engine::load()
 {
     // BEGIN: Add all the systems you want here
-    Camera* camera = new Camera(glm::vec3(9.0f, 20.0f, 45.f), glm::vec3(0, 1, 0), -90, 0);
+    Camera* camera = new Camera(glm::vec3(0, 0, 4));
 	InputManager* inputManager = new InputManager();
 	VulkanEngine* graphics = new VulkanEngine();
     // END: Add all the systems you want here

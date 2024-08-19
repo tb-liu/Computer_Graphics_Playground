@@ -24,6 +24,7 @@ void InputManager::update(float)
 			// esacpe key to exit program
 			if (e.key.keysym.sym == SDLK_ESCAPE) bQuit = true;
 			InputGlobal::keyboardStates[e.key.keysym.sym].pressed = true;
+			// printf("Key pressed detected (%c)\n", e.key.keysym.sym);
 		}
 		else if (e.type == SDL_KEYUP)
 			InputGlobal::keyboardStates[e.key.keysym.sym].released = true;
