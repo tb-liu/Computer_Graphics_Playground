@@ -15,6 +15,7 @@
 #include "Defines.h"
 #include "vk_pipeline.h"
 
+#include "engine.h"
 
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -50,6 +51,12 @@ void VulkanEngine::init()
 	loadMeshes();
 	//everything went fine
 	isInitialized = true;
+
+	// grab the pointer to camera system
+	cameraPtr = dynamic_cast<Camera*>(Engine::getInstance()->getSystem(SystemType::CAMERA));
+	ubo.model = glm::mat4(1.f);
+	ubo.proj = glm::perspective(glm::radians(45.f), windowExtent.width / (float)windowExtent.height, 0.1f, 200.f);
+	ubo.proj[1][1] *= -1;
 }
 void VulkanEngine::shutdown()
 {	
@@ -96,7 +103,6 @@ void VulkanEngine::update(float dt)
 	VkCommandBufferBeginInfo cmdBeginInfo = {};
 	cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	cmdBeginInfo.pNext = nullptr;
-
 	cmdBeginInfo.pInheritanceInfo = nullptr;
 	cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
@@ -127,6 +133,10 @@ void VulkanEngine::update(float dt)
 	rpInfo.clearValueCount = 2;
 	rpInfo.pClearValues = &clearValues[0];
 
+	// get transform matrix
+	ubo.model = glm::rotate(glm::mat4{ 1.0f }, glm::radians(frameNumber * 0.4f), glm::vec3(0, 1, 0));
+	ubo.view = cameraPtr->getViewMatrix();
+
 
 	// begin render pass
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -148,6 +158,10 @@ void VulkanEngine::update(float dt)
 		//bind the mesh vertex buffer with offset 0
 		VkDeviceSize offset = 0;
 		vkCmdBindVertexBuffers(cmd, 0, 1, &monkeyMesh.vertexBuffer.buffer, &offset);
+
+		// push the matrix as constant
+		vkCmdPushConstants(cmd, meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UniformBuffer), &ubo);
+
 		//we can now draw the mesh
 		vkCmdDraw(cmd, monkeyMesh.vertices.size(), 1, 0, 0);
 	}
@@ -620,6 +634,18 @@ void VulkanEngine::initPipeline()
 
 
 	// build the mesh pipeline
+	VkPipelineLayoutCreateInfo meshPipelineLayoutInfo = vkinit::pipelineLayoutCreateInfo();
+	VkPushConstantRange pushConstant;
+	pushConstant.offset = 0;
+	pushConstant.size = sizeof(UniformBuffer);
+	pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+	meshPipelineLayoutInfo.pPushConstantRanges = &pushConstant;
+	meshPipelineLayoutInfo.pushConstantRangeCount = 1;
+
+	VK_CHECK(vkCreatePipelineLayout(device, &meshPipelineLayoutInfo, nullptr, &meshPipelineLayout));
+
+
 	VertexInputDescription vertexDescription = Vertex::getVertexDescription();
 
 	// connect the pipeline builder vertex input info to the one we get from Vertex
@@ -640,6 +666,8 @@ void VulkanEngine::initPipeline()
 	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, meshVertShader));
 	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
 
+	pipelineBuilder.pipelineLayout = meshPipelineLayout;
+
 	//build the mesh triangle pipeline
 	meshPipeline = pipelineBuilder.buildPipeline(device, renderPass);
 
@@ -655,6 +683,7 @@ void VulkanEngine::initPipeline()
 									   vkDestroyPipeline(device, trianglePipeline, nullptr);
 									   vkDestroyPipeline(device, meshPipeline, nullptr);
 									   // destroy the pipeline layout that they use
-									   vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr); });
+									   vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr); 
+									   vkDestroyPipelineLayout(device, meshPipelineLayout, nullptr);});
 }
 

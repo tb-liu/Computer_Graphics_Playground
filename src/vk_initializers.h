@@ -4,7 +4,8 @@
 
 #include <vk_types.h>
 
-namespace vkinit {
+namespace vkinit 
+{
 
 	//vulkan init code goes here
 	VkCommandPoolCreateInfo commandPoolCreateInfo(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);

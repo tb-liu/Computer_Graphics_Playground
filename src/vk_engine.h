@@ -10,7 +10,7 @@
 #include "RingBuffer.h"
 #include "Mesh.h"
 #include "SystemBase.h"
-
+#include "Camera.h"
 
 namespace GraphicsGlobal 
 {
@@ -49,6 +49,9 @@ public:
 
 	SystemType Type() const override;
 private:
+	
+	Camera* cameraPtr;
+	UniformBuffer ubo;
 
 	// basic vulkan
 	VkInstance instance;
@@ -83,6 +86,7 @@ private:
 
 	// pipeline related things
 	VkPipelineLayout trianglePipelineLayout;
+	VkPipelineLayout meshPipelineLayout;
 	VkPipeline trianglePipeline;
 	VkPipeline redTrianglePipeline;
 	VkPipeline meshPipeline;
@@ -96,7 +100,7 @@ private:
 	// mesh objects
 	Mesh monkeyMesh;
 
-	//loads a shader module from a spir-v file. Returns false if it errors
+	// loads a shader module from a spir-v file. Returns false if it errors
 	bool loadShaderModule(const char* filePath, VkShaderModule* outShaderModule);
 	// a wrapper function for loading shader
 	void loadShaderWrapper(std::string shaderName, VkShaderModule* outShaderModule);

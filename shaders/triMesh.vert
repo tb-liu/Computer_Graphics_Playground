@@ -16,6 +16,6 @@ layout( push_constant ) uniform constants
 
 void main()
 {
-	gl_Position = vec4(vPosition, 1.0f);
+	gl_Position = PushConstants.proj * PushConstants.view * PushConstants.model * vec4(vPosition, 1.0f);
 	outColor = vColor;
 }
