@@ -2,11 +2,11 @@
 #include "Defines.h"
 #include "vk_initializers.h"
 
-RingSyncObjects::RingSyncObjects()
+FrameData::FrameData()
 {
 }
 
-void RingSyncObjects::init(int max, VkDevice device, uint32_t graphicsQueueFamily)
+void FrameData::initSyncObjects(int max, VkDevice device, uint32_t graphicsQueueFamily)
 {
 	this->device = device;
 	syncObjects.resize(max);
@@ -49,7 +49,18 @@ void RingSyncObjects::init(int max, VkDevice device, uint32_t graphicsQueueFamil
 	
 }
 
-void RingSyncObjects::cleanUp()
+void FrameData::initBuffers(VmaAllocator allocator, size_t bufferSize)
+{
+	this->allocator = allocator;
+	buffers.resize(this->maxObjectNum);
+	for (int i = 0; i < maxObjectNum; i++)
+	{
+		buffers[i] = vkinit::createBuffer(allocator, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	}
+
+}
+
+void FrameData::cleanUpSyncObjects()
 {
 	for (int i = 0; i < maxObjectNum; i++)
 	{
@@ -60,12 +71,20 @@ void RingSyncObjects::cleanUp()
 	}
 }
 
-RingSyncObjects::~RingSyncObjects()
+void FrameData::cleanUpBuffers()
+{
+	for (int i = 0; i < maxObjectNum; i++)
+	{
+		vmaDestroyBuffer(allocator, buffers[i].buffer, buffers[i].allocation);
+	}
+}
+
+FrameData::~FrameData()
 {	
 }
 
 
-SyncObject* RingSyncObjects::getNextObject()
+SyncObject* FrameData::getNextObject()
 {
 	int index = currentIndex;
 	currentIndex = currentIndex++ % maxObjectNum;

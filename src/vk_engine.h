@@ -82,7 +82,7 @@ private:
 	std::vector<VkFramebuffer> framebuffers;
 
 	// Sync Object
-	RingSyncObjects ringBuffer;
+	FrameData frameData;
 
 	// pipeline related things
 	VkPipelineLayout trianglePipelineLayout;
@@ -115,4 +115,5 @@ private:
 	void initFrameBuffers();
 	void initSyncStructures();
 	void initPipeline();
+	void initDescriptors();
 };

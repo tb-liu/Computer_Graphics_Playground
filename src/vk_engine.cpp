@@ -46,6 +46,7 @@ void VulkanEngine::init()
 	initDefaultRenderpass();
 	initFrameBuffers();
 	initSyncStructures();
+	initDescriptors();
 	initPipeline();
 	loadMeshes();
 	//everything went fine
@@ -64,7 +65,8 @@ void VulkanEngine::shutdown()
 		// wait for all things to finish
 		vkDeviceWaitIdle(device);
 		// destroy sync objects
-		ringBuffer.cleanUp();
+		frameData.cleanUpSyncObjects();
+		frameData.cleanUpBuffers();
 
 		deletionQueue.flush();
 
@@ -83,7 +85,7 @@ void VulkanEngine::update(float dt)
 {
 
 	// acqure next sync objects
-	SyncObject * nextSync = ringBuffer.getNextObject();
+	SyncObject * nextSync = frameData.getNextObject();
 	// wait until the GPU has finished rendering the last frame. Timeout of 1 second
 	VK_CHECK(vkWaitForFences(device, 1, &nextSync->renderFence, true, ONE_SECOND));
 	VK_CHECK(vkResetFences(device, 1, &nextSync->renderFence));
@@ -526,7 +528,8 @@ void VulkanEngine::initFrameBuffers()
 
 void VulkanEngine::initSyncStructures()
 {
-	ringBuffer.init(2, device, graphicsQueueFamily);
+	// this also init the command buffer stuff
+	frameData.initSyncObjects(2, device, graphicsQueueFamily);
 }
 
 void VulkanEngine::initPipeline()
@@ -662,5 +665,11 @@ void VulkanEngine::initPipeline()
 									   // destroy the pipeline layout that they use
 									   vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr); 
 									   vkDestroyPipelineLayout(device, meshPipelineLayout, nullptr);});
+}
+
+
+void VulkanEngine::initDescriptors()
+{
+	frameData.initBuffers(allocator, sizeof(UniformBuffer));
 }
 
