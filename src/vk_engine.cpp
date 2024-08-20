@@ -46,7 +46,7 @@ void VulkanEngine::init()
 	initDefaultRenderpass();
 	initFrameBuffers();
 	initSyncStructures();
-	//initDescriptors();
+	initDescriptors();
 	initPipeline();
 	loadMeshes();
 	//everything went fine
