@@ -68,6 +68,9 @@ private:
 	VkImageView depthImageView;
 	AllocatedImage depthImage;
 
+	VkDescriptorSetLayout globalSetLayout;
+	VkDescriptorPool descriptorPool;
+
 	//the format for the depth image
 	VkFormat depthFormat;
 	// vulkan command buffer & graphics queue
@@ -80,9 +83,12 @@ private:
 	// render pass
 	VkRenderPass renderPass;
 	std::vector<VkFramebuffer> framebuffers;
+	// one buffer per frame
+	std::vector<AllocatedBuffer> buffers;
+	std::vector<VkDescriptorSet> globalDescriptors;
 
 	// Sync Object
-	FrameData frameData;
+	RingBuffer ringBuffer;
 
 	// pipeline related things
 	VkPipelineLayout trianglePipelineLayout;

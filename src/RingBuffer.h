@@ -11,23 +11,19 @@ struct SyncObject
 	VkCommandBuffer mainCommandBuffer;
 };
 
-class FrameData
+class RingBuffer
 {
 public:
-	FrameData();
+	RingBuffer();
 	void initSyncObjects(int max, VkDevice device, uint32_t graphicsQueueFamily);
-	void initBuffers(VmaAllocator allocator, size_t bufferSize);
 	void cleanUpSyncObjects();
-	void cleanUpBuffers();
-	~FrameData();
+	~RingBuffer();
 	SyncObject * getNextObject();
 private:
 	int currentIndex;
 	int maxObjectNum;
 	VkDevice device;
-	VmaAllocator allocator;
 	// TODO: make the sync object and buffer two classes?
 	std::vector<SyncObject> syncObjects;
-	std::vector<AllocatedBuffer> buffers;
-	std::vector<VkDescriptorSet> globalDescriptors;
+
 };

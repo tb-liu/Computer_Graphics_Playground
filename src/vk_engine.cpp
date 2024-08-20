@@ -46,7 +46,7 @@ void VulkanEngine::init()
 	initDefaultRenderpass();
 	initFrameBuffers();
 	initSyncStructures();
-	initDescriptors();
+	//initDescriptors();
 	initPipeline();
 	loadMeshes();
 	//everything went fine
@@ -65,8 +65,7 @@ void VulkanEngine::shutdown()
 		// wait for all things to finish
 		vkDeviceWaitIdle(device);
 		// destroy sync objects
-		frameData.cleanUpSyncObjects();
-		frameData.cleanUpBuffers();
+		ringBuffer.cleanUpSyncObjects();
 
 		deletionQueue.flush();
 
@@ -85,7 +84,7 @@ void VulkanEngine::update(float dt)
 {
 
 	// acqure next sync objects
-	SyncObject * nextSync = frameData.getNextObject();
+	SyncObject * nextSync = ringBuffer.getNextObject();
 	// wait until the GPU has finished rendering the last frame. Timeout of 1 second
 	VK_CHECK(vkWaitForFences(device, 1, &nextSync->renderFence, true, ONE_SECOND));
 	VK_CHECK(vkResetFences(device, 1, &nextSync->renderFence));
@@ -529,7 +528,7 @@ void VulkanEngine::initFrameBuffers()
 void VulkanEngine::initSyncStructures()
 {
 	// this also init the command buffer stuff
-	frameData.initSyncObjects(2, device, graphicsQueueFamily);
+	ringBuffer.initSyncObjects(2, device, graphicsQueueFamily);
 }
 
 void VulkanEngine::initPipeline()
@@ -668,8 +667,21 @@ void VulkanEngine::initPipeline()
 }
 
 
+
 void VulkanEngine::initDescriptors()
 {
-	frameData.initBuffers(allocator, sizeof(UniformBuffer));
+	buffers.resize(MAX_FRAMES_IN_FLIGHT);
+	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	{
+		buffers[i] = vkinit::createBuffer(allocator, sizeof(UniformBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	}
+
+	// add buffers to deletion queues
+	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	{
+		deletionQueue.pushFunction([=]() {
+			vmaDestroyBuffer(allocator, buffers[i].buffer, buffers[i].allocation);
+			});
+	}
 }
 
