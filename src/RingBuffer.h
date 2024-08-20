@@ -6,13 +6,16 @@ struct SyncObject
 {
 	VkSemaphore presentSemaphore, renderSemaphore;
 	VkFence renderFence;
+
+	VkCommandPool commandPool;
+	VkCommandBuffer mainCommandBuffer;
 };
 
 class RingSyncObjects
 {
 public:
 	RingSyncObjects();
-	void init(int max, VkDevice device);
+	void init(int max, VkDevice device, uint32_t graphicsQueueFamily);
 	void cleanUp();
 	~RingSyncObjects();
 	SyncObject * getNextObject();
@@ -21,5 +24,4 @@ private:
 	int maxObjectNum;
 	VkDevice device;
 	std::vector<SyncObject> syncObjects;
-	// TODO: maybe add command buffer to here as well
 };

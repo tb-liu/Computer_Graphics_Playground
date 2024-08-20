@@ -43,7 +43,6 @@ void VulkanEngine::init()
 	// vulkan init
 	initVulkan();
 	initSwapchain();
-	initCommands();
 	initDefaultRenderpass();
 	initFrameBuffers();
 	initSyncStructures();
@@ -94,10 +93,10 @@ void VulkanEngine::update(float dt)
 
 	//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
 	int frameIndex = CURRENT_FRAME = CURRENT_FRAME++ % MAX_FRAMES_IN_FLIGHT;
-	VK_CHECK(vkResetCommandBuffer(mainCommandBuffer[frameIndex], 0));
+	VK_CHECK(vkResetCommandBuffer(nextSync->mainCommandBuffer, 0));
 
 	//naming it cmd for shorter writing
-	VkCommandBuffer cmd = mainCommandBuffer[frameIndex];
+	VkCommandBuffer cmd = nextSync->mainCommandBuffer;
 
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo = {};
@@ -165,7 +164,6 @@ void VulkanEngine::update(float dt)
 		//we can now draw the mesh
 		vkCmdDraw(cmd, monkeyMesh.vertices.size(), 1, 0, 0);
 	}
-		
 	
 	//finalize the render pass
 	vkCmdEndRenderPass(cmd);
@@ -406,28 +404,7 @@ void VulkanEngine::initSwapchain()
 									   vkDestroySwapchainKHR(device, swapchain, nullptr); });
 }
 
-void VulkanEngine::initCommands()
-{
-	commandPool.resize(MAX_FRAMES_IN_FLIGHT);
-	mainCommandBuffer.resize(MAX_FRAMES_IN_FLIGHT);
 
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-	{
-		//create a command pool for commands submitted to the graphics queue.
-	//we also want the pool to allow for resetting of individual command buffers
-		VkCommandPoolCreateInfo commandPoolInfo = vkinit::commandPoolCreateInfo(graphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-
-		VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool[i]));
-
-		//allocate the default command buffer that we will use for rendering
-		VkCommandBufferAllocateInfo cmdAllocInfo = vkinit::commandBufferAllocateInfo(commandPool[i], 1);
-
-		VK_CHECK(vkAllocateCommandBuffers(device, &cmdAllocInfo, &mainCommandBuffer[i]));
-		deletionQueue.pushFunction([=]() { vkDestroyCommandPool(device, commandPool[i], nullptr); });
-	}
-	
-
-}
 
 void VulkanEngine::initDefaultRenderpass()
 {
@@ -549,7 +526,7 @@ void VulkanEngine::initFrameBuffers()
 
 void VulkanEngine::initSyncStructures()
 {
-	ringBuffer.init(2, device);
+	ringBuffer.init(2, device, graphicsQueueFamily);
 }
 
 void VulkanEngine::initPipeline()

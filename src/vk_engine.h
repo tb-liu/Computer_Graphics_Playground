@@ -74,8 +74,8 @@ private:
 	VkQueue graphicsQueue; //queue we will submit to
 	uint32_t graphicsQueueFamily; //family of that queue
 
-	std::vector<VkCommandPool> commandPool; //the command pool for our commands
-	std::vector<VkCommandBuffer> mainCommandBuffer; //the buffer we will record into
+	//std::vector<VkCommandPool> commandPool; //the command pool for our commands
+	//std::vector<VkCommandBuffer> mainCommandBuffer; //the buffer we will record into
 
 	// render pass
 	VkRenderPass renderPass;
@@ -111,7 +111,6 @@ private:
 
 	void initVulkan();
 	void initSwapchain();
-	void initCommands();
 	void initDefaultRenderpass();
 	void initFrameBuffers();
 	void initSyncStructures();
