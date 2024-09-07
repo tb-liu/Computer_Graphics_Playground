@@ -158,9 +158,16 @@ void VulkanEngine::update(float dt)
 		//bind the mesh vertex buffer with offset 0
 		VkDeviceSize offset = 0;
 		vkCmdBindVertexBuffers(cmd, 0, 1, &monkeyMesh.vertexBuffer.buffer, &offset);
-
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipelineLayout, 0, 1, &globalDescriptors[CURRENT_FRAME], 0, nullptr);
 		// push the matrix as constant
-		vkCmdPushConstants(cmd, meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UniformBuffer), &ubo);
+		// vkCmdPushConstants(cmd, meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UniformBuffer), &ubo);
+		//and copy it to the buffer
+		void* data;
+		vmaMapMemory(allocator, buffers[CURRENT_FRAME].allocation, &data);
+
+		memcpy(data, &ubo, sizeof(UniformBuffer));
+
+		vmaUnmapMemory(allocator, buffers[CURRENT_FRAME].allocation);
 
 		//we can now draw the mesh
 		vkCmdDraw(cmd, monkeyMesh.vertices.size(), 1, 0, 0);
@@ -622,6 +629,9 @@ void VulkanEngine::initPipeline()
 	meshPipelineLayoutInfo.pPushConstantRanges = &pushConstant;
 	meshPipelineLayoutInfo.pushConstantRangeCount = 1;
 
+	meshPipelineLayoutInfo.setLayoutCount = 1;
+	meshPipelineLayoutInfo.pSetLayouts = &globalSetLayout;
+
 	VK_CHECK(vkCreatePipelineLayout(device, &meshPipelineLayoutInfo, nullptr, &meshPipelineLayout));
 
 
@@ -670,18 +680,97 @@ void VulkanEngine::initPipeline()
 
 void VulkanEngine::initDescriptors()
 {
+	//information about the binding.
+	VkDescriptorSetLayoutBinding camBufferBinding = {};
+	camBufferBinding.binding = 0;
+	camBufferBinding.descriptorCount = 1;
+	// it's a uniform buffer binding
+	camBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+	// we use it from the vertex shader
+	camBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+
+	VkDescriptorSetLayoutCreateInfo setinfo = {};
+	setinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	setinfo.pNext = nullptr;
+
+	//we are going to have 1 binding
+	setinfo.bindingCount = 1;
+	//no flags
+	setinfo.flags = 0;
+	//point to the camera buffer binding
+	setinfo.pBindings = &camBufferBinding;
+
+	vkCreateDescriptorSetLayout(device, &setinfo, nullptr, &globalSetLayout);
+
+	std::vector<VkDescriptorPoolSize> sizes =
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 }
+	};
+
+	VkDescriptorPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.flags = 0;
+	poolInfo.maxSets = 10;
+	poolInfo.poolSizeCount = (uint32_t)sizes.size();
+	poolInfo.pPoolSizes = sizes.data();
+
+	vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool);
+
 	buffers.resize(MAX_FRAMES_IN_FLIGHT);
+	globalDescriptors.resize(MAX_FRAMES_IN_FLIGHT);
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
 		buffers[i] = vkinit::createBuffer(allocator, sizeof(UniformBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		// allocate one descriptor set for each frame
+		VkDescriptorSetAllocateInfo allocateInfo = {};
+		allocateInfo.pNext = nullptr;
+		allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		// using the pool we just set
+		allocateInfo.descriptorPool = descriptorPool;
+		allocateInfo.descriptorSetCount = 1;
+		allocateInfo.pSetLayouts = &globalSetLayout;
+
+		vkAllocateDescriptorSets(device, &allocateInfo, &globalDescriptors[i]);
+
+		// info about the buffer we want to point at in the descriptor
+		VkDescriptorBufferInfo bufferInfo;
+		bufferInfo.buffer = buffers[i].buffer;
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBuffer);
+
+		VkWriteDescriptorSet setWrite = {};
+		setWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		setWrite.pNext = nullptr;
+		// binds to poistion 0
+		setWrite.dstBinding = 0;
+		setWrite.dstSet = globalDescriptors[i];
+		// descritptor count
+		setWrite.descriptorCount = 1;
+		// type of buffer
+		setWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		setWrite.pBufferInfo = &bufferInfo;
+
+		vkUpdateDescriptorSets(device, 1, &setWrite, 0, nullptr);
+
 	}
 
 	// add buffers to deletion queues
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
+		// error out if uses by reference
 		deletionQueue.pushFunction([=]() {
 			vmaDestroyBuffer(allocator, buffers[i].buffer, buffers[i].allocation);
 			});
 	}
+
+
+	// add descriptor set layout to deletion queues
+	deletionQueue.pushFunction([=]() {
+		vkDestroyDescriptorSetLayout(device, globalSetLayout, nullptr);
+		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+		});
 }
 
