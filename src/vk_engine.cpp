@@ -285,10 +285,10 @@ void VulkanEngine::loadShaderWrapper(std::string shaderName, VkShaderModule* out
 
 void VulkanEngine::loadMeshes()
 {
-	monkeyMesh.loadFromOBJ("../../assets/monkey_smooth.obj");
+	meshes["Monkey"].loadFromOBJ("../../assets/monkey_smooth.obj");
 
 	// upload the mesh to GPU
-	uploadMesh(monkeyMesh);
+	uploadMesh(meshes["Monkey"]);
 }
 
 void VulkanEngine::uploadMesh(Mesh& mesh)
@@ -538,6 +538,35 @@ void VulkanEngine::initSyncStructures()
 	ringBuffer.initSyncObjects(2, device, graphicsQueueFamily);
 }
 
+Material* VulkanEngine::createMaterial(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)
+{
+	Material mat;
+	mat.pipeline = pipeline;
+	mat.pipelineLayout = layout;
+	materials[name] = mat;
+	return &materials[name];
+}
+
+Material* VulkanEngine::getMaterial(const std::string& name)
+{
+	//search for the object, and return nullptr if not found
+	auto it = materials.find(name);
+	if (it == materials.end())
+		return nullptr;
+	else
+		return &(*it).second;
+}
+
+
+Mesh* VulkanEngine::getMesh(const std::string& name)
+{
+	auto it = meshes.find(name);
+	if (it == meshes.end())
+		return nullptr;
+	else
+		return &(*it).second;
+}
+
 void VulkanEngine::initPipeline()
 {
 	VkShaderModule triangleVertexShader;
@@ -675,6 +704,7 @@ void VulkanEngine::initPipeline()
 									   vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr); 
 									   vkDestroyPipelineLayout(device, meshPipelineLayout, nullptr);});
 }
+
 
 
 

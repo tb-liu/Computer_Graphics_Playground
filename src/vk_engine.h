@@ -5,6 +5,7 @@
 #include <vk_types.h>
 #include <vector>
 #include <vk_mem_alloc.h>
+#include <unordered_map>
 
 #include "DeletionQueue.h"
 #include "RingBuffer.h"
@@ -77,9 +78,6 @@ private:
 	VkQueue graphicsQueue; //queue we will submit to
 	uint32_t graphicsQueueFamily; //family of that queue
 
-	//std::vector<VkCommandPool> commandPool; //the command pool for our commands
-	//std::vector<VkCommandBuffer> mainCommandBuffer; //the buffer we will record into
-
 	// render pass
 	VkRenderPass renderPass;
 	std::vector<VkFramebuffer> framebuffers;
@@ -91,11 +89,12 @@ private:
 	RingBuffer ringBuffer;
 
 	// pipeline related things
-	VkPipelineLayout trianglePipelineLayout;
+	// TODO: all these will go into render objects array
+	/*VkPipelineLayout trianglePipelineLayout;
 	VkPipelineLayout meshPipelineLayout;
 	VkPipeline trianglePipeline;
 	VkPipeline redTrianglePipeline;
-	VkPipeline meshPipeline;
+	VkPipeline meshPipeline;*/
 
 	// deletion queue
 	DeletionQueue deletionQueue;
@@ -104,10 +103,21 @@ private:
 	VmaAllocator allocator;
 
 	// mesh objects
-	Mesh monkeyMesh;
+	std::vector<RenderObject> renderObjects;
+	std::unordered_map<std::string, Material> materials;
+	std::unordered_map<std::string, Mesh> meshes;
+
+	//create material and add it to the map
+	Material* createMaterial(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
+
+	//returns nullptr if it can't be found
+	Material* getMaterial(const std::string& name);
+
+	Mesh* getMesh(const std::string& name);
 
 	// loads a shader module from a spir-v file. Returns false if it errors
 	bool loadShaderModule(const char* filePath, VkShaderModule* outShaderModule);
+
 	// a wrapper function for loading shader
 	void loadShaderWrapper(std::string shaderName, VkShaderModule* outShaderModule);
 

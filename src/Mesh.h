@@ -24,8 +24,26 @@ struct Vertex
 
 struct Mesh
 {
+    //TODO: add indices array
     std::vector<Vertex> vertices;
 
     AllocatedBuffer vertexBuffer;
     bool loadFromOBJ(const char * filename);
 };
+
+struct Material
+{
+    VkPipeline pipeline;
+    VkPipelineLayout pipelineLayout;
+};
+
+struct RenderObject
+{
+    Mesh* mesh;
+
+    Material* material;
+
+    glm::mat4 transformMatrix;
+};
+
+void generateSphere(Mesh& mesh, int numDivisions);

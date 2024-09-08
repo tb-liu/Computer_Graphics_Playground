@@ -23,7 +23,6 @@ private:
 	int currentIndex;
 	int maxObjectNum;
 	VkDevice device;
-	// TODO: make the sync object and buffer two classes?
 	std::vector<SyncObject> syncObjects;
 
 };

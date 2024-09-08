@@ -1,7 +1,8 @@
 #include <tiny_obj_loader.h>
 #include <iostream>
 #include "Mesh.h"
-
+const float PI = 3.1415926;
+const float R = 0.5f;
 VertexInputDescription Vertex::getVertexDescription()
 {
 	VertexInputDescription description;
@@ -110,3 +111,55 @@ bool Mesh::loadFromOBJ(const char* filename)
 
 	return true;
 }
+
+void generateSphere(Mesh& mesh, int numDivisions)
+{
+	std::vector<Vertex>& indices = mesh.vertices;
+	float sectorStep = 2 * PI / numDivisions;
+	float stackStep = PI / numDivisions;
+	float sectorAngle, stackAngle;
+	float x, y, z, xy;
+
+
+	for (int i = 0; i <= numDivisions; i++)
+	{
+		stackAngle = PI / 2 - i * stackStep;
+		xy = R * cosf(stackAngle);
+		z = R * sinf(stackAngle);
+		for (int j = 0; j <= numDivisions; j++)
+		{
+			sectorAngle = j * sectorStep;
+			y = xy * sinf(sectorAngle);
+			x = xy * cosf(sectorAngle);
+			// push position and normal, default blue color
+			indices.push_back({ glm::vec3(x, y, z), glm::vec3(x, y, z), glm::vec3(0.f, 0.f, 0.5f) });
+		}
+	}
+	// TODO: need to edit the mesh class to use indices buffer
+	/*int L1, L2;
+	for (int i = 0; i < numDivisions; i++)
+	{
+		L1 = i * (numDivisions + 1);
+		L2 = L1 + numDivisions + 1;
+
+		for (int j = 0; j < numDivisions; j++)
+		{
+			if (i != 0)
+			{
+				index.push_back(L1);
+				index.push_back(L2);
+				index.push_back(L1 + 1);
+			}
+
+			if (i != (numDivisions - 1))
+			{
+				index.push_back(L1 + 1);
+				index.push_back(L2);
+				index.push_back(L2 + 1);
+			}
+			L1++;
+			L2++;
+		}
+	}*/
+}
+
