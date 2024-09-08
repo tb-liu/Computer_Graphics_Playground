@@ -49,6 +49,7 @@ void VulkanEngine::init()
 	initDescriptors();
 	initPipeline();
 	loadMeshes();
+	initScene();
 	//everything went fine
 	isInitialized = true;
 
@@ -142,7 +143,7 @@ void VulkanEngine::update(float dt)
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	
-	if (GraphicsGlobal::SELECTED_SHADER == 0)
+	/*if (GraphicsGlobal::SELECTED_SHADER == 0)
 	{
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
 		vkCmdDraw(cmd, 3, 1, 0, 0);
@@ -152,13 +153,13 @@ void VulkanEngine::update(float dt)
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, redTrianglePipeline);
 		vkCmdDraw(cmd, 3, 1, 0, 0);
 	}
-	else
+	else*/
 	{
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline);
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObjects[0].material->pipeline);
 		//bind the mesh vertex buffer with offset 0
 		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(cmd, 0, 1, &monkeyMesh.vertexBuffer.buffer, &offset);
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipelineLayout, 0, 1, &globalDescriptors[CURRENT_FRAME], 0, nullptr);
+		vkCmdBindVertexBuffers(cmd, 0, 1, &renderObjects[0].mesh->vertexBuffer.buffer, &offset);
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObjects[0].material->pipelineLayout, 0, 1, &globalDescriptors[CURRENT_FRAME], 0, nullptr);
 		// push the matrix as constant
 		// vkCmdPushConstants(cmd, meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UniformBuffer), &ubo);
 		//and copy it to the buffer
@@ -170,7 +171,7 @@ void VulkanEngine::update(float dt)
 		vmaUnmapMemory(allocator, buffers[CURRENT_FRAME].allocation);
 
 		//we can now draw the mesh
-		vkCmdDraw(cmd, monkeyMesh.vertices.size(), 1, 0, 0);
+		vkCmdDraw(cmd, renderObjects[0].mesh->vertices.size(), 1, 0, 0);
 	}
 	
 	//finalize the render pass
@@ -567,6 +568,7 @@ Mesh* VulkanEngine::getMesh(const std::string& name)
 		return &(*it).second;
 }
 
+
 void VulkanEngine::initPipeline()
 {
 	VkShaderModule triangleVertexShader;
@@ -647,7 +649,8 @@ void VulkanEngine::initPipeline()
 
 
 
-
+	VkPipelineLayout meshPipelineLayout;
+	VkPipeline meshPipeline;
 	// build the mesh pipeline
 	VkPipelineLayoutCreateInfo meshPipelineLayoutInfo = vkinit::pipelineLayoutCreateInfo();
 	VkPushConstantRange pushConstant;
@@ -688,6 +691,10 @@ void VulkanEngine::initPipeline()
 
 	//build the mesh triangle pipeline
 	meshPipeline = pipelineBuilder.buildPipeline(device, renderPass);
+	// create material here
+	createMaterial(meshPipeline, meshPipelineLayout, "DefaultMesh");
+
+
 
 	//deleting all of the vulkan shaders
 	vkDestroyShaderModule(device, meshVertShader, nullptr);
@@ -706,7 +713,15 @@ void VulkanEngine::initPipeline()
 }
 
 
+void VulkanEngine::initScene()
+{
+	RenderObject monkey;
+	monkey.mesh = getMesh("Monkey");
+	monkey.material = getMaterial("DefaultMesh");
+	monkey.transformMatrix = glm::mat4(1.f);
 
+	renderObjects.push_back(monkey);
+}
 
 void VulkanEngine::initDescriptors()
 {

@@ -6,6 +6,7 @@
 #include <vector>
 #include <vk_mem_alloc.h>
 #include <unordered_map>
+#include <String>
 
 #include "DeletionQueue.h"
 #include "RingBuffer.h"
@@ -90,11 +91,10 @@ private:
 
 	// pipeline related things
 	// TODO: all these will go into render objects array
-	/*VkPipelineLayout trianglePipelineLayout;
-	VkPipelineLayout meshPipelineLayout;
+	VkPipelineLayout trianglePipelineLayout;
 	VkPipeline trianglePipeline;
 	VkPipeline redTrianglePipeline;
-	VkPipeline meshPipeline;*/
+
 
 	// deletion queue
 	DeletionQueue deletionQueue;
@@ -109,10 +109,7 @@ private:
 
 	//create material and add it to the map
 	Material* createMaterial(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
-
-	//returns nullptr if it can't be found
 	Material* getMaterial(const std::string& name);
-
 	Mesh* getMesh(const std::string& name);
 
 	// loads a shader module from a spir-v file. Returns false if it errors
@@ -132,4 +129,5 @@ private:
 	void initSyncStructures();
 	void initPipeline();
 	void initDescriptors();
+	void initScene();
 };
