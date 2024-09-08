@@ -24,10 +24,10 @@ struct Vertex
 
 struct Mesh
 {
-    //TODO: add indices array
     std::vector<Vertex> vertices;
-
+    std::vector<uint32_t> indices;
     AllocatedBuffer vertexBuffer;
+    AllocatedBuffer indiceBuffer;
     bool loadFromOBJ(const char * filename);
 };
 

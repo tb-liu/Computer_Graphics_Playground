@@ -99,11 +99,12 @@ bool Mesh::loadFromOBJ(const char* filename)
 				newVert.normal.y = ny;
 				newVert.normal.z = nz;
 
-				//we are setting the vertex color as the vertex normal. This is just for display purposes
+				// setting the vertex color as the vertex normal. This is just for display purposes
 				newVert.color = newVert.normal;
 
 
 				vertices.push_back(newVert);
+				// indices.push_back(indexOffset + v);
 			}
 			indexOffset += fv;
 		}
@@ -114,7 +115,8 @@ bool Mesh::loadFromOBJ(const char* filename)
 
 void generateSphere(Mesh& mesh, int numDivisions)
 {
-	std::vector<Vertex>& indices = mesh.vertices;
+	std::vector<Vertex>& vertices = mesh.vertices;
+	std::vector<uint32_t>& indices = mesh.indices;
 	float sectorStep = 2 * PI / numDivisions;
 	float stackStep = PI / numDivisions;
 	float sectorAngle, stackAngle;
@@ -132,11 +134,11 @@ void generateSphere(Mesh& mesh, int numDivisions)
 			y = xy * sinf(sectorAngle);
 			x = xy * cosf(sectorAngle);
 			// push position and normal, default blue color
-			indices.push_back({ glm::vec3(x, y, z), glm::vec3(x, y, z), glm::vec3(0.f, 0.f, 0.5f) });
+			vertices.push_back({ glm::vec3(x, y, z), glm::vec3(x, y, z), glm::vec3(0.f, 0.f, 0.5f) });
 		}
 	}
-	// TODO: need to edit the mesh class to use indices buffer
-	/*int L1, L2;
+
+	int L1, L2;
 	for (int i = 0; i < numDivisions; i++)
 	{
 		L1 = i * (numDivisions + 1);
@@ -146,20 +148,20 @@ void generateSphere(Mesh& mesh, int numDivisions)
 		{
 			if (i != 0)
 			{
-				index.push_back(L1);
-				index.push_back(L2);
-				index.push_back(L1 + 1);
+				indices.push_back(L1);
+				indices.push_back(L2);
+				indices.push_back(L1 + 1);
 			}
 
 			if (i != (numDivisions - 1))
 			{
-				index.push_back(L1 + 1);
-				index.push_back(L2);
-				index.push_back(L2 + 1);
+				indices.push_back(L1 + 1);
+				indices.push_back(L2);
+				indices.push_back(L2 + 1);
 			}
 			L1++;
 			L2++;
 		}
-	}*/
+	}
 }
 

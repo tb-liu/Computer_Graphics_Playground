@@ -120,7 +120,7 @@ private:
 
 	// mesh functions
 	void loadMeshes();
-	void uploadMesh(Mesh & mesh);
+	void uploadMesh(Mesh & mesh, bool indice = false);
 
 	void initVulkan();
 	void initSwapchain();

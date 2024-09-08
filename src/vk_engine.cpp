@@ -172,6 +172,13 @@ void VulkanEngine::update(float dt)
 
 		//we can now draw the mesh
 		vkCmdDraw(cmd, renderObjects[0].mesh->vertices.size(), 1, 0, 0);
+
+		// draw the sphere
+		vkCmdBindVertexBuffers(cmd, 0, 1, &renderObjects[1].mesh->vertexBuffer.buffer, &offset);
+		vkCmdBindIndexBuffer(cmd, renderObjects[1].mesh->indiceBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(renderObjects[1].mesh->indices.size()), 1, 0, 0, 0);
+
 	}
 	
 	//finalize the render pass
@@ -287,12 +294,13 @@ void VulkanEngine::loadShaderWrapper(std::string shaderName, VkShaderModule* out
 void VulkanEngine::loadMeshes()
 {
 	meshes["Monkey"].loadFromOBJ("../../assets/monkey_smooth.obj");
-
+	generateSphere(meshes["Sphere"], 20);
 	// upload the mesh to GPU
 	uploadMesh(meshes["Monkey"]);
+	uploadMesh(meshes["Sphere"], true);
 }
 
-void VulkanEngine::uploadMesh(Mesh& mesh)
+void VulkanEngine::uploadMesh(Mesh& mesh, bool indices)
 {
 	//allocate vertex buffer
 	VkBufferCreateInfo bufferInfo = {};
@@ -317,6 +325,28 @@ void VulkanEngine::uploadMesh(Mesh& mesh)
 	vmaMapMemory(allocator, mesh.vertexBuffer.allocation, &data);
 	memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
 	vmaUnmapMemory(allocator, mesh.vertexBuffer.allocation);
+
+	// if has indices buffer
+	if (indices)
+	{
+		//allocate vertex buffer
+		VkBufferCreateInfo bufferInfo = {};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = mesh.indices.size() * sizeof(uint32_t);
+		bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+		// allocate the buffer
+		VK_CHECK(vmaCreateBuffer(allocator, &bufferInfo, &vmaAllocInfo, &mesh.indiceBuffer.buffer, &mesh.indiceBuffer.allocation, nullptr));
+
+		// add the destruction of triangle mesh buffer to the deletion queue
+		deletionQueue.pushFunction([=]() { vmaDestroyBuffer(allocator, mesh.indiceBuffer.buffer, mesh.indiceBuffer.allocation); });
+
+		// copy the data to gpu
+		void* data;
+		vmaMapMemory(allocator, mesh.indiceBuffer.allocation, &data);
+		memcpy(data, mesh.indices.data(), mesh.indices.size() * sizeof(uint32_t));
+		vmaUnmapMemory(allocator, mesh.indiceBuffer.allocation);
+	}
 }
 
 void VulkanEngine::initVulkan()
@@ -721,6 +751,13 @@ void VulkanEngine::initScene()
 	monkey.transformMatrix = glm::mat4(1.f);
 
 	renderObjects.push_back(monkey);
+
+	RenderObject sphere;
+	sphere.mesh = getMesh("Sphere");
+	sphere.material = getMaterial("DefaultMesh");
+	sphere.transformMatrix = glm::mat4(1.f);
+
+	renderObjects.push_back(sphere);
 }
 
 void VulkanEngine::initDescriptors()
