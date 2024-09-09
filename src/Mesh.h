@@ -1,8 +1,11 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <glm/glm.hpp>
 #include "vk_types.h"
+
+const int MAX_INSTANCE = 4096; // max particles for now
 
 struct VertexInputDescription
 {
@@ -44,6 +47,17 @@ struct RenderObject
     Material* material;
 
     glm::mat4 transformMatrix;
+};
+
+// for particles information
+struct StorageBuffer
+{
+    std::array<glm::vec4, MAX_INSTANCE> pos;
+    std::array<glm::vec4, MAX_INSTANCE> vel;
+
+    // store the info need to allocate buffer for this struct
+    // also not contribute to the class size
+    static AllocatedBuffer storageBuffer;
 };
 
 void generateSphere(Mesh& mesh, int numDivisions);

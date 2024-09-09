@@ -24,6 +24,8 @@ int CURRENT_FRAME = 0;
 const int GraphicsGlobal::MAX_SHADER_COUNT = 3;
 int GraphicsGlobal::SELECTED_SHADER = 2;
 
+
+
 void VulkanEngine::init()
 {
 	// We initialize SDL and create a window with it. 
@@ -160,8 +162,7 @@ void VulkanEngine::update(float dt)
 		VkDeviceSize offset = 0;
 		vkCmdBindVertexBuffers(cmd, 0, 1, &renderObjects[0].mesh->vertexBuffer.buffer, &offset);
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObjects[0].material->pipelineLayout, 0, 1, &globalDescriptors[CURRENT_FRAME], 0, nullptr);
-		// push the matrix as constant
-		// vkCmdPushConstants(cmd, meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UniformBuffer), &ubo);
+
 		//and copy it to the buffer
 		void* data;
 		vmaMapMemory(allocator, buffers[CURRENT_FRAME].allocation, &data);
@@ -309,7 +310,7 @@ void VulkanEngine::uploadMesh(Mesh& mesh, bool indices)
 	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
 
-	// let the VMA library know that this data should be writeable by CPU, but also readable by GPU
+	// TODO: change this to GPU only and pass the info use staging buffer.
 	VmaAllocationCreateInfo vmaAllocInfo = {};
 	vmaAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
@@ -760,6 +761,107 @@ void VulkanEngine::initScene()
 	renderObjects.push_back(sphere);
 }
 
+void VulkanEngine::initComputeBuffer() 
+{
+	// this will used for storing all particles information
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(StorageBuffer);
+	bufferInfo.flags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | 
+						VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | 
+						VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; // Used in compute and graphics pipelines
+
+	VmaAllocationCreateInfo allocInfo = {};
+	allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+	// allocate the buffer
+	VK_CHECK(vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &StorageBuffer::storageBuffer.buffer, &StorageBuffer::storageBuffer.allocation, nullptr));
+
+	// add the destruction of buffer to the deletion queue
+	deletionQueue.pushFunction([=]() { vmaDestroyBuffer(allocator, StorageBuffer::storageBuffer.buffer, StorageBuffer::storageBuffer.allocation); });
+
+	// init partiles info and upload to the buffer
+	// resetParticleInfo();
+}
+void VulkanEngine::resetParticleInfo(VkCommandPool cmdPool, VkQueue queue)
+{
+	// TODO: move the init particles pos to GPU?
+	StorageBuffer buffer = {};
+	float goldenRatio = (1.0f + std::sqrt(5.0f)) / 2.0f;
+	float angleIncrement = 2.0f * M_PI * goldenRatio;
+
+	for (size_t i = 0; i < MAX_INSTANCE; i++)
+	{
+		float t = float(i) / float(MAX_INSTANCE);
+		float inclination = std::acos(1.0f - 2.0f * t);
+		float azimuth = angleIncrement * i;
+
+		buffer.pos[i].x = std::sin(inclination) * std::cos(azimuth);
+		buffer.pos[i].y = std::sin(inclination) * std::sin(azimuth);
+		buffer.pos[i].z = std::cos(inclination);
+		buffer.pos[i].w = 1.f;
+
+		buffer.vel[i] = glm::vec4(0, -9.8f, 0, 0);
+	}
+
+	// create a staging buffer
+	VkBuffer stagingBuffer;
+	VmaAllocation stagingBufferAllocation;
+
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(StorageBuffer);
+	bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+	VmaAllocationCreateInfo allocInfo = {};
+	allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // Allows CPU access
+
+	VK_CHECK(vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &stagingBuffer, &stagingBufferAllocation, nullptr));
+
+	// Map the buffer and copy the initial data
+	void* data;
+	vmaMapMemory(allocator, stagingBufferAllocation, &data);
+	memcpy(data, &buffer, sizeof(StorageBuffer));
+	vmaUnmapMemory(allocator, stagingBufferAllocation);
+
+	// upload the data to gpu
+	copyBuffer(cmdPool, queue, stagingBuffer, buffer.storageBuffer.buffer, sizeof(StorageBuffer));
+}
+
+void VulkanEngine::copyBuffer(VkCommandPool cmdPool, VkQueue queue,VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+{
+	VkCommandBufferAllocateInfo allocaInfo{};
+	allocaInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocaInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocaInfo.commandBufferCount = 1;
+	allocaInfo.commandPool = cmdPool;
+
+	VkCommandBuffer commandBuffer;
+	vkAllocateCommandBuffers(device, &allocaInfo, &commandBuffer);
+
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	VkBufferCopy copyRegion{};
+	copyRegion.srcOffset = 0;
+	copyRegion.dstOffset = 0;
+	copyRegion.size = size;
+	vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+	vkEndCommandBuffer(commandBuffer);
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(graphicsQueue);
+
+	vkFreeCommandBuffers(device, cmdPool, 1, &commandBuffer);
+}
 void VulkanEngine::initDescriptors()
 {
 	//information about the binding.

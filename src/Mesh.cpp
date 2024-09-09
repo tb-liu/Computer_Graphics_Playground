@@ -165,3 +165,4 @@ void generateSphere(Mesh& mesh, int numDivisions)
 	}
 }
 
+AllocatedBuffer StorageBuffer::storageBuffer;

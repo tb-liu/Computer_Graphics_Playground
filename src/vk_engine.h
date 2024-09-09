@@ -78,6 +78,7 @@ private:
 	// vulkan command buffer & graphics queue
 	VkQueue graphicsQueue; //queue we will submit to
 	uint32_t graphicsQueueFamily; //family of that queue
+	// TODO: add compute 
 
 	// render pass
 	VkRenderPass renderPass;
@@ -130,4 +131,7 @@ private:
 	void initPipeline();
 	void initDescriptors();
 	void initScene();
+	void initComputeBuffer();
+	void resetParticleInfo(VkCommandPool cmdPool, VkQueue queue);
+	void copyBuffer(VkCommandPool cmdPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 };

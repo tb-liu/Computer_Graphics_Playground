@@ -1,0 +1,33 @@
+#version 450
+const int MAX_INSTANCE = 4096;
+
+layout(local_size_x = 256) in; // Define the number of threads per workgroup
+
+layout(push_constant) uniform PushConstants {
+    float dt;
+} pc;
+
+layout(std140, binding = 0) buffer storageBuffer {
+	vec4 pos[MAX_INSTANCE];
+    vec4 velocity[MAX_INSTANCE];
+} ObjectData;
+
+void main()
+{
+    uint local_id = gl_LocalInvocationID.x;
+    uint group_id = gl_WorkGroupID.x;  // Workgroup ID on the x dimension
+    uint group_size = gl_WorkGroupSize.x;  // Number of threads per workgroup
+
+    // Calculate global index based on workgroup ID and local ID within the workgroup
+    uint global_id = group_id * group_size + local_id;
+
+    // Ensure we do not access out of bounds
+    if (global_id >= ObjectData.pos.length()) return;
+
+    // Access the portion of the array specific to this workgroup
+    vec4 currentPosition = ObjectData.pos[global_id];
+    vec4 currentVelocity = ObjectData.velocity[global_id];
+
+    // Simple physics update
+    ObjectData.pos[global_id].xyz += currentVelocity.xyz * pc.dt;
+}
