@@ -51,6 +51,7 @@ void VulkanEngine::init()
 	initDescriptors();
 	initPipeline();
 	loadMeshes();
+	initComputeBuffer();
 	initScene();
 	//everything went fine
 	isInitialized = true;
@@ -101,6 +102,12 @@ void VulkanEngine::update(float dt)
 
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = nextSync->mainCommandBuffer;
+
+	if (resetParticle)
+	{
+		resetParticle = false;
+		resetParticleInfo(nextSync->commandPool, graphicsQueue);
+	}
 
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo = {};
@@ -767,7 +774,7 @@ void VulkanEngine::initComputeBuffer()
 	VkBufferCreateInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferInfo.size = sizeof(StorageBuffer);
-	bufferInfo.flags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | 
+	bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | 
 						VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | 
 						VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; // Used in compute and graphics pipelines
 
@@ -826,6 +833,8 @@ void VulkanEngine::resetParticleInfo(VkCommandPool cmdPool, VkQueue queue)
 
 	// upload the data to gpu
 	copyBuffer(cmdPool, queue, stagingBuffer, buffer.storageBuffer.buffer, sizeof(StorageBuffer));
+
+	vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
 }
 
 void VulkanEngine::copyBuffer(VkCommandPool cmdPool, VkQueue queue,VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)

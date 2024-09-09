@@ -54,6 +54,7 @@ private:
 	
 	Camera* cameraPtr;
 	UniformBuffer ubo;
+	bool resetParticle = true;
 
 	// basic vulkan
 	VkInstance instance;
