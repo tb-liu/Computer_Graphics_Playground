@@ -97,9 +97,8 @@ private:
 	RingBuffer computeQueueRingBuffer;
 
 	// pipeline related things
-	// TODO: all these will go into render objects array
-	VkPipelineLayout computePipelineLayout;
-	VkPipeline computePipeline;
+	// Now moved to pipeline sets
+	
 
 
 	// deletion queue
@@ -110,12 +109,12 @@ private:
 
 	// mesh objects
 	std::vector<RenderObject> renderObjects;
-	std::unordered_map<std::string, Material> materials;
+	std::unordered_map<std::string, PipelineSet> pipelineSets;
 	std::unordered_map<std::string, Mesh> meshes;
 
 	//create material and add it to the map
-	Material* createMaterial(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
-	Material* getMaterial(const std::string& name);
+	PipelineSet* recordPipelineSet(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name);
+	PipelineSet* getPipelineSet(const std::string& name);
 	Mesh* getMesh(const std::string& name);
 
 	// loads a shader module from a spir-v file. Returns false if it errors

@@ -34,7 +34,7 @@ struct Mesh
     bool loadFromOBJ(const char * filename);
 };
 
-struct Material
+struct PipelineSet
 {
     VkPipeline pipeline;
     VkPipelineLayout pipelineLayout;
@@ -44,7 +44,7 @@ struct RenderObject
 {
     Mesh* mesh;
 
-    Material* material;
+    PipelineSet* pipelineSet;
 
     glm::mat4 transformMatrix;
 };
