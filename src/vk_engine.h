@@ -71,7 +71,8 @@ private:
 	VkImageView depthImageView;
 	AllocatedImage depthImage;
 
-	VkDescriptorSetLayout globalSetLayout;
+	VkDescriptorSetLayout graphicsSetLayout;
+	VkDescriptorSetLayout computeSetLayout;
 	VkDescriptorPool descriptorPool;
 
 	//the format for the depth image
@@ -79,23 +80,26 @@ private:
 	// vulkan command buffer & graphics queue
 	VkQueue graphicsQueue; //queue we will submit to
 	uint32_t graphicsQueueFamily; //family of that queue
-	// TODO: add compute 
+	// TODO: add compute
 
 	// render pass
 	VkRenderPass renderPass;
 	std::vector<VkFramebuffer> framebuffers;
 	// one buffer per frame
-	std::vector<AllocatedBuffer> buffers;
-	std::vector<VkDescriptorSet> globalDescriptors;
+	std::vector<AllocatedBuffer> buffers; // inited in initDescriptors
+	std::vector<VkDescriptorSet> vertexShaderDescriptors;
+	VkDescriptorSet computeDescriptors;
 
 	// Sync Object
 	RingBuffer ringBuffer;
 
 	// pipeline related things
 	// TODO: all these will go into render objects array
+	VkPipelineLayout computePipelineLayout;
 	VkPipelineLayout trianglePipelineLayout;
 	VkPipeline trianglePipeline;
 	VkPipeline redTrianglePipeline;
+	VkPipeline computePipeline;
 
 
 	// deletion queue

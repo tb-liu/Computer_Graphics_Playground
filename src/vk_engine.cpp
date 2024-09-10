@@ -47,11 +47,11 @@ void VulkanEngine::init()
 	initSwapchain();
 	initDefaultRenderpass();
 	initFrameBuffers();
+	initComputeBuffer();
 	initSyncStructures();
 	initDescriptors();
 	initPipeline();
 	loadMeshes();
-	initComputeBuffer();
 	initScene();
 	//everything went fine
 	isInitialized = true;
@@ -168,7 +168,7 @@ void VulkanEngine::update(float dt)
 		//bind the mesh vertex buffer with offset 0
 		VkDeviceSize offset = 0;
 		vkCmdBindVertexBuffers(cmd, 0, 1, &renderObjects[0].mesh->vertexBuffer.buffer, &offset);
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObjects[0].material->pipelineLayout, 0, 1, &globalDescriptors[CURRENT_FRAME], 0, nullptr);
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObjects[0].material->pipelineLayout, 0, 1, &vertexShaderDescriptors[CURRENT_FRAME], 0, nullptr);
 
 		//and copy it to the buffer
 		void* data;
@@ -621,6 +621,7 @@ void VulkanEngine::initPipeline()
 	VkShaderModule redTriangleFragShader;
 	loadShaderWrapper("colorTriangle.frag", &redTriangleFragShader);
 
+
 	//build the pipeline layout that controls the inputs/outputs of the shader
 	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = vkinit::pipelineLayoutCreateInfo();
@@ -696,11 +697,11 @@ void VulkanEngine::initPipeline()
 	pushConstant.size = sizeof(UniformBuffer);
 	pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-	meshPipelineLayoutInfo.pPushConstantRanges = &pushConstant;
-	meshPipelineLayoutInfo.pushConstantRangeCount = 1;
+	/*meshPipelineLayoutInfo.pPushConstantRanges = &pushConstant;
+	meshPipelineLayoutInfo.pushConstantRangeCount = 1;*/
 
 	meshPipelineLayoutInfo.setLayoutCount = 1;
-	meshPipelineLayoutInfo.pSetLayouts = &globalSetLayout;
+	meshPipelineLayoutInfo.pSetLayouts = &graphicsSetLayout;
 
 	VK_CHECK(vkCreatePipelineLayout(device, &meshPipelineLayoutInfo, nullptr, &meshPipelineLayout));
 
@@ -732,7 +733,9 @@ void VulkanEngine::initPipeline()
 	// create material here
 	createMaterial(meshPipeline, meshPipelineLayout, "DefaultMesh");
 
-
+	// pipeline for compute shader
+	VkShaderModule computeShader;
+	loadShaderWrapper("computeShader.comp", &computeShader);
 
 	//deleting all of the vulkan shaders
 	vkDestroyShaderModule(device, meshVertShader, nullptr);
@@ -740,6 +743,7 @@ void VulkanEngine::initPipeline()
 	vkDestroyShaderModule(device, redTriangleFragShader, nullptr);
 	vkDestroyShaderModule(device, triangleFragShader, nullptr);
 	vkDestroyShaderModule(device, triangleVertexShader, nullptr);
+	vkDestroyShaderModule(device, computeShader, nullptr);
 
 	// destroy the 2 pipelines we have created
 	deletionQueue.pushFunction([=]() { vkDestroyPipeline(device, redTrianglePipeline, nullptr);
@@ -877,29 +881,49 @@ void VulkanEngine::initDescriptors()
 	VkDescriptorSetLayoutBinding camBufferBinding = {};
 	camBufferBinding.binding = 0;
 	camBufferBinding.descriptorCount = 1;
-	// it's a uniform buffer binding
 	camBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-	// we use it from the vertex shader
 	camBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
+	VkDescriptorSetLayoutBinding particleInfoBinding{};
+	particleInfoBinding.binding = 1;
+	particleInfoBinding.descriptorCount = 1;
+	particleInfoBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	particleInfoBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // for graphics pipeline, only read this in vertex shader
+	particleInfoBinding.pImmutableSamplers = nullptr;
+
+	std::array<VkDescriptorSetLayoutBinding, 2> graphicsBindings = { camBufferBinding, particleInfoBinding };
 
 	VkDescriptorSetLayoutCreateInfo setinfo = {};
 	setinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	setinfo.pNext = nullptr;
-
-	//we are going to have 1 binding
-	setinfo.bindingCount = 1;
-	//no flags
+	setinfo.bindingCount = static_cast<uint32_t>(graphicsBindings.size());
 	setinfo.flags = 0;
-	//point to the camera buffer binding
-	setinfo.pBindings = &camBufferBinding;
+	setinfo.pBindings = graphicsBindings.data();
 
-	vkCreateDescriptorSetLayout(device, &setinfo, nullptr, &globalSetLayout);
+	vkCreateDescriptorSetLayout(device, &setinfo, nullptr, &graphicsSetLayout);
+
+	// add descriptor for compute shader
+	VkDescriptorSetLayoutBinding storageBufferBinding = {};
+	storageBufferBinding.binding = 0;
+	storageBufferBinding.descriptorCount = 1;
+	storageBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	storageBufferBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+	std::array<VkDescriptorSetLayoutBinding, 1> computeBindings = { storageBufferBinding };
+
+	setinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	setinfo.pNext = nullptr;
+	setinfo.bindingCount = static_cast<uint32_t>(computeBindings.size());
+	setinfo.flags = 0;
+	setinfo.pBindings = computeBindings.data();
+
+	vkCreateDescriptorSetLayout(device, &setinfo, nullptr, &computeSetLayout);
+
 
 	std::vector<VkDescriptorPoolSize> sizes =
 	{
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 }
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
 	};
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
@@ -912,7 +936,8 @@ void VulkanEngine::initDescriptors()
 	vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool);
 
 	buffers.resize(MAX_FRAMES_IN_FLIGHT);
-	globalDescriptors.resize(MAX_FRAMES_IN_FLIGHT);
+	vertexShaderDescriptors.resize(MAX_FRAMES_IN_FLIGHT);
+
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
 		buffers[i] = vkinit::createBuffer(allocator, sizeof(UniformBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
@@ -921,12 +946,11 @@ void VulkanEngine::initDescriptors()
 		VkDescriptorSetAllocateInfo allocateInfo = {};
 		allocateInfo.pNext = nullptr;
 		allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		// using the pool we just set
 		allocateInfo.descriptorPool = descriptorPool;
 		allocateInfo.descriptorSetCount = 1;
-		allocateInfo.pSetLayouts = &globalSetLayout;
+		allocateInfo.pSetLayouts = &graphicsSetLayout;
 
-		vkAllocateDescriptorSets(device, &allocateInfo, &globalDescriptors[i]);
+		vkAllocateDescriptorSets(device, &allocateInfo, &vertexShaderDescriptors[i]);
 
 		// info about the buffer we want to point at in the descriptor
 		VkDescriptorBufferInfo bufferInfo;
@@ -937,10 +961,8 @@ void VulkanEngine::initDescriptors()
 		VkWriteDescriptorSet setWrite = {};
 		setWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		setWrite.pNext = nullptr;
-		// binds to poistion 0
 		setWrite.dstBinding = 0;
-		setWrite.dstSet = globalDescriptors[i];
-		// descritptor count
+		setWrite.dstSet = vertexShaderDescriptors[i];
 		setWrite.descriptorCount = 1;
 		// type of buffer
 		setWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -948,7 +970,48 @@ void VulkanEngine::initDescriptors()
 
 		vkUpdateDescriptorSets(device, 1, &setWrite, 0, nullptr);
 
+		// storage buffer info
+		bufferInfo.buffer = StorageBuffer::storageBuffer.buffer;
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(StorageBuffer);
+
+		setWrite.dstBinding = 1;
+		setWrite.dstSet = vertexShaderDescriptors[i];
+		setWrite.descriptorCount = 1;
+		setWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		setWrite.pBufferInfo = &bufferInfo;
+
+		vkUpdateDescriptorSets(device, 1, &setWrite, 0, nullptr);
 	}
+
+
+	// TODO: create two storage buffer? read from one, wirte to another.
+	// for compute shader
+	VkDescriptorSetAllocateInfo allocateInfo = {};
+	allocateInfo.pNext = nullptr;
+	allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocateInfo.descriptorPool = descriptorPool;
+	allocateInfo.descriptorSetCount = 1;
+	allocateInfo.pSetLayouts = &computeSetLayout;
+
+	vkAllocateDescriptorSets(device, &allocateInfo, &computeDescriptors);
+
+	// info about the buffer we want to point at in the descriptor
+	VkDescriptorBufferInfo bufferInfo;
+	bufferInfo.buffer = StorageBuffer::storageBuffer.buffer;
+	bufferInfo.offset = 0;
+	bufferInfo.range = sizeof(StorageBuffer);
+
+	VkWriteDescriptorSet setWrite = {};
+	setWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	setWrite.pNext = nullptr;
+	setWrite.dstBinding = 0;
+	setWrite.dstSet = computeDescriptors;
+	setWrite.descriptorCount = 1;
+	setWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	setWrite.pBufferInfo = &bufferInfo;
+
+	vkUpdateDescriptorSets(device, 1, &setWrite, 0, nullptr);
 
 	// add buffers to deletion queues
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -959,10 +1022,12 @@ void VulkanEngine::initDescriptors()
 			});
 	}
 
+	// vmaDestroyBuffer(allocator, );
 
 	// add descriptor set layout to deletion queues
 	deletionQueue.pushFunction([=]() {
-		vkDestroyDescriptorSetLayout(device, globalSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(device, graphicsSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(device, computeSetLayout, nullptr);
 		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 		});
 }
