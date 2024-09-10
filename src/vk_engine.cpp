@@ -87,18 +87,27 @@ void VulkanEngine::shutdown()
 
 void VulkanEngine::update(float dt)
 {
-
+	int frameIndex = CURRENT_FRAME = CURRENT_FRAME++ % MAX_FRAMES_IN_FLIGHT;
 	// acqure next sync objects
 	SyncObject * nextSync = graphicsQueueRingBuffer.getNextObject();
+	SyncObject* nextComputeSync = computeQueueRingBuffer.getNextObject();
+
+
+	// compute pipeline
+	// wait for previous compute done
+	/*VK_CHECK(vkWaitForFences(device, 1, &nextComputeSync->renderFence, true, ONE_SECOND));
+	VK_CHECK(vkResetFences(device, 1, &nextComputeSync->renderFence));*/
+
+
+
+
+	// graphics pipeline
 	// wait until the GPU has finished rendering the last frame. Timeout of 1 second
 	VK_CHECK(vkWaitForFences(device, 1, &nextSync->renderFence, true, ONE_SECOND));
 	VK_CHECK(vkResetFences(device, 1, &nextSync->renderFence));
 	//request image from the swapchain, one second timeout
 	uint32_t swapchainImageIndex;
 	VK_CHECK(vkAcquireNextImageKHR(device, swapchain, ONE_SECOND, nextSync->presentSemaphore, nullptr, &swapchainImageIndex));
-
-	//now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
-	int frameIndex = CURRENT_FRAME = CURRENT_FRAME++ % MAX_FRAMES_IN_FLIGHT;
 	VK_CHECK(vkResetCommandBuffer(nextSync->mainCommandBuffer, 0));
 
 	//naming it cmd for shorter writing
@@ -175,7 +184,7 @@ void VulkanEngine::update(float dt)
 		vkCmdBindVertexBuffers(cmd, 0, 1, &renderObjects[1].mesh->vertexBuffer.buffer, &offset);
 		vkCmdBindIndexBuffer(cmd, renderObjects[1].mesh->indiceBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(renderObjects[1].mesh->indices.size()), 1, 0, 0, 0);
+		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(renderObjects[1].mesh->indices.size()), 5, 0, 0, 0);
 
 	}
 	
@@ -191,17 +200,12 @@ void VulkanEngine::update(float dt)
 	VkSubmitInfo submit = {};
 	submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit.pNext = nullptr;
-
 	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
 	submit.pWaitDstStageMask = &waitStage;
-
 	submit.waitSemaphoreCount = 1;
-	submit.pWaitSemaphores = &nextSync->presentSemaphore;
-
+	submit.pWaitSemaphores = &nextSync->presentSemaphore; // TODO: wait on the compute done
 	submit.signalSemaphoreCount = 1;
 	submit.pSignalSemaphores = &nextSync->renderSemaphore;
-
 	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &cmd;
 
@@ -214,13 +218,10 @@ void VulkanEngine::update(float dt)
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.pNext = nullptr;
-
 	presentInfo.pSwapchains = &swapchain;
 	presentInfo.swapchainCount = 1;
-
 	presentInfo.pWaitSemaphores = &nextSync->renderSemaphore;
 	presentInfo.waitSemaphoreCount = 1;
-
 	presentInfo.pImageIndices = &swapchainImageIndex;
 
 	VK_CHECK(vkQueuePresentKHR(graphicsQueue, &presentInfo));
@@ -765,7 +766,7 @@ void VulkanEngine::resetParticleInfo(VkCommandPool cmdPool, VkQueue queue)
 	for (size_t i = 0; i < MAX_INSTANCE; i++)
 	{
 		float t = float(i) / float(MAX_INSTANCE);
-		float inclination = std::acos(1.0f - 2.0f * t);
+		float inclination = std::acos(1.0f - 2.0f * t) * 5;
 		float azimuth = angleIncrement * i;
 
 		buffer.pos[i].x = std::sin(inclination) * std::cos(azimuth);

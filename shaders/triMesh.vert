@@ -23,6 +23,7 @@ layout(std140, binding = 1) buffer storageBuffer {
 
 void main()
 {
-	gl_Position = cameraData.proj * cameraData.view * cameraData.model * vec4(vPosition, 1.0f);
+	vec4 pos = ObjectData.pos[gl_InstanceIndex] + cameraData.model * vec4(vPosition, 1);
+	gl_Position = cameraData.proj * cameraData.view * pos;
 	outColor = vColor;
 }

@@ -95,11 +95,8 @@ private:
 	// Sync Object
 	RingBuffer graphicsQueueRingBuffer;
 	RingBuffer computeQueueRingBuffer;
-
-	// pipeline related things
-	// Now moved to pipeline sets
-	
-
+	// store the previous graphics sync object ptr
+	SyncObject* prevSync;
 
 	// deletion queue
 	DeletionQueue deletionQueue;
