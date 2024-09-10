@@ -121,18 +121,20 @@ void VulkanEngine::update(float dt)
 
 
 	VK_CHECK(vkEndCommandBuffer(computeCmd));
-	std::array<VkSemaphore, 1> computeWaitSemaphores = { prevSync };
+	std::array<VkSemaphore, 2> computeWaitSemaphores = { nextSync->presentSemaphore, nextComputeSync->renderSemaphore };
+	std::array<VkSemaphore, 1> computeSignalSemaphores = { nextSync->renderSemaphore };
+	std::array<VkPipelineStageFlags, 1> computeWaitStage = { VK_PIPELINE_STAGE_VERTEX_SHADER_BIT};
+	VkSubmitInfo computeSubmit = {};
+	computeSubmit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	computeSubmit.pWaitDstStageMask = computeWaitStage.data();
+	computeSubmit.waitSemaphoreCount = computeWaitSemaphores.size();
+	computeSubmit.pWaitSemaphores = computeWaitSemaphores.data();
+	computeSubmit.signalSemaphoreCount = computeSignalSemaphores.size();
+	computeSubmit.pSignalSemaphores = computeSignalSemaphores.data();
+	computeSubmit.commandBufferCount = 1;
+	computeSubmit.pCommandBuffers = &computeCmd;
 
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &computeCmd;
-	submitInfo.pWaitSemaphores = computeWaitSemaphores.data();
-	submitInfo.waitSemaphoreCount = computeWaitSemaphores.size();
-	submitInfo.pSignalSemaphores = &nextComputeSync->renderSemaphore;
-	submitInfo.signalSemaphoreCount = 1;
-
-	vkQueueSubmit(computeQueue, 1, &submitInfo, nextComputeSync->renderFence);
+	vkQueueSubmit(computeQueue, 1, &computeSubmit, nextComputeSync->renderFence);
 
 	// graphics pipeline
 	// wait until the GPU has finished rendering the last frame. Timeout of 1 second
