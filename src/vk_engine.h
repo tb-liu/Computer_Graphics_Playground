@@ -82,7 +82,6 @@ private:
 	uint32_t graphicsQueueFamily; //family of that queue
 	VkQueue computeQueue;
 	uint32_t computeQueueFramily;
-	// TODO: add compute
 
 	// render pass
 	VkRenderPass renderPass;
@@ -96,7 +95,7 @@ private:
 	RingBuffer graphicsQueueRingBuffer;
 	RingBuffer computeQueueRingBuffer;
 	// store the previous graphics sync object ptr
-	SyncObject* prevSync;
+	VkSemaphore prevSync;
 
 	// deletion queue
 	DeletionQueue deletionQueue;

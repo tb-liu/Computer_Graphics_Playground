@@ -92,14 +92,47 @@ void VulkanEngine::update(float dt)
 	SyncObject * nextSync = graphicsQueueRingBuffer.getNextObject();
 	SyncObject* nextComputeSync = computeQueueRingBuffer.getNextObject();
 
+	
 
 	// compute pipeline
 	// wait for previous compute done
-	/*VK_CHECK(vkWaitForFences(device, 1, &nextComputeSync->renderFence, true, ONE_SECOND));
-	VK_CHECK(vkResetFences(device, 1, &nextComputeSync->renderFence));*/
+	VK_CHECK(vkWaitForFences(device, 1, &nextComputeSync->renderFence, true, ONE_SECOND));
+	VK_CHECK(vkResetFences(device, 1, &nextComputeSync->renderFence));
+
+	VkCommandBuffer computeCmd = nextComputeSync->mainCommandBuffer;
+
+	//TODO: add begin compute cmd recording here
+	VkCommandBufferBeginInfo computeCmdBeginInfo = {};
+	computeCmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	computeCmdBeginInfo.pNext = nullptr;
+	computeCmdBeginInfo.pInheritanceInfo = nullptr;
+	computeCmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VK_CHECK(vkBeginCommandBuffer(computeCmd, &computeCmdBeginInfo));
+
+	vkCmdBindPipeline(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("ComputePipeline")->pipeline);
+	vkCmdBindDescriptorSets(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("ComputePipeline")->pipelineLayout, 0, 1, &computeDescriptors, 0, nullptr);
+	//upload the matrix to the GPU via push constants
+	vkCmdPushConstants(computeCmd, getPipelineSet("ComputePipeline")->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &dt);
+
+	// Dispatch the compute shader
+	vkCmdDispatch(computeCmd, 4096 / 256 + 1, 1, 1);
+	
 
 
+	VK_CHECK(vkEndCommandBuffer(computeCmd));
+	std::array<VkSemaphore, 1> computeWaitSemaphores = { prevSync };
 
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &computeCmd;
+	submitInfo.pWaitSemaphores = computeWaitSemaphores.data();
+	submitInfo.waitSemaphoreCount = computeWaitSemaphores.size();
+	submitInfo.pSignalSemaphores = &nextComputeSync->renderSemaphore;
+	submitInfo.signalSemaphoreCount = 1;
+
+	vkQueueSubmit(computeQueue, 1, &submitInfo, nextComputeSync->renderFence);
 
 	// graphics pipeline
 	// wait until the GPU has finished rendering the last frame. Timeout of 1 second
@@ -197,18 +230,23 @@ void VulkanEngine::update(float dt)
 	//we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
 	//we will signal the _renderSemaphore, to signal that rendering has finished
 
+	//nextSync->presentSemaphore we wait for get the current framebuffer, nextComputeSync->renderSemaphore wair for compute is done
+	std::array<VkSemaphore, 2> waitSemaphores = { nextSync->presentSemaphore, nextComputeSync->renderSemaphore };
+	std::array<VkSemaphore, 2> signalSemaphores = { nextSync->presentSemaphore, nextSync->renderSemaphore };
 	VkSubmitInfo submit = {};
 	submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit.pNext = nullptr;
 	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	submit.pWaitDstStageMask = &waitStage;
-	submit.waitSemaphoreCount = 1;
-	submit.pWaitSemaphores = &nextSync->presentSemaphore; // TODO: wait on the compute done
-	submit.signalSemaphoreCount = 1;
-	submit.pSignalSemaphores = &nextSync->renderSemaphore;
+	submit.waitSemaphoreCount = waitSemaphores.size();
+	submit.pWaitSemaphores = waitSemaphores.data();
+	submit.signalSemaphoreCount = signalSemaphores.size();
+	submit.pSignalSemaphores = signalSemaphores.data();
 	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &cmd;
 
+
+	prevSync = nextSync->renderSemaphore;
 	//submit command buffer to the queue and execute it.
 	// _renderFence will now block until the graphic commands finish execution
 	VK_CHECK(vkQueueSubmit(graphicsQueue, 1, &submit, nextSync->renderFence));
@@ -220,7 +258,7 @@ void VulkanEngine::update(float dt)
 	presentInfo.pNext = nullptr;
 	presentInfo.pSwapchains = &swapchain;
 	presentInfo.swapchainCount = 1;
-	presentInfo.pWaitSemaphores = &nextSync->renderSemaphore;
+	presentInfo.pWaitSemaphores = &nextSync->presentSemaphore;
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pImageIndices = &swapchainImageIndex;
 
@@ -570,7 +608,7 @@ void VulkanEngine::initSyncStructures()
 {
 	// this also init the command buffer stuff
 	graphicsQueueRingBuffer.initSyncObjects(MAX_FRAMES_IN_FLIGHT, device, graphicsQueueFamily);
-	computeQueueRingBuffer.initSyncObjects(MAX_FRAMES_IN_FLIGHT, device, computeQueueFramily);
+	computeQueueRingBuffer.initSyncObjects(1, device, computeQueueFramily); // currently only one buffer for compute pipeline
 
 }
 
