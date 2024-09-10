@@ -69,7 +69,8 @@ void VulkanEngine::shutdown()
 		// wait for all things to finish
 		vkDeviceWaitIdle(device);
 		// destroy sync objects
-		ringBuffer.cleanUpSyncObjects();
+		graphicsQueueRingBuffer.cleanUpSyncObjects();
+		computeQueueRingBuffer.cleanUpSyncObjects();
 
 		deletionQueue.flush();
 
@@ -88,7 +89,7 @@ void VulkanEngine::update(float dt)
 {
 
 	// acqure next sync objects
-	SyncObject * nextSync = ringBuffer.getNextObject();
+	SyncObject * nextSync = graphicsQueueRingBuffer.getNextObject();
 	// wait until the GPU has finished rendering the last frame. Timeout of 1 second
 	VK_CHECK(vkWaitForFences(device, 1, &nextSync->renderFence, true, ONE_SECOND));
 	VK_CHECK(vkResetFences(device, 1, &nextSync->renderFence));
@@ -398,6 +399,10 @@ void VulkanEngine::initVulkan()
 	graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
+	// get a compute queue
+	computeQueue = vkbDevice.get_queue(vkb::QueueType::compute).value();
+	computeQueueFramily = vkbDevice.get_queue_index(vkb::QueueType::compute).value();
+
 	// initialize the memory allocator
 	VmaAllocatorCreateInfo allocatorInfo{};
 	allocatorInfo.physicalDevice = gpuDevice;
@@ -574,7 +579,9 @@ void VulkanEngine::initFrameBuffers()
 void VulkanEngine::initSyncStructures()
 {
 	// this also init the command buffer stuff
-	ringBuffer.initSyncObjects(2, device, graphicsQueueFamily);
+	graphicsQueueRingBuffer.initSyncObjects(MAX_FRAMES_IN_FLIGHT, device, graphicsQueueFamily);
+	computeQueueRingBuffer.initSyncObjects(MAX_FRAMES_IN_FLIGHT, device, computeQueueFramily);
+
 }
 
 Material* VulkanEngine::createMaterial(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)
@@ -609,14 +616,6 @@ Mesh* VulkanEngine::getMesh(const std::string& name)
 
 void VulkanEngine::initPipeline()
 {
-	VkShaderModule triangleVertexShader;
-	loadShaderWrapper("triangle.vert", &triangleVertexShader);
-
-	VkShaderModule triangleFragShader;
-	loadShaderWrapper("triangle.frag", &triangleFragShader);
-
-	VkShaderModule redTriangleVertShader;
-	loadShaderWrapper("colorTriangle.vert", &redTriangleVertShader);
 
 	VkShaderModule redTriangleFragShader;
 	loadShaderWrapper("colorTriangle.frag", &redTriangleFragShader);
@@ -626,15 +625,8 @@ void VulkanEngine::initPipeline()
 	//we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = vkinit::pipelineLayoutCreateInfo();
 
-	VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &trianglePipelineLayout));
-
 	//build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader modules per stage
 	PipelineBuilder pipelineBuilder;
-
-	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, triangleVertexShader));
-
-	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
-
 
 	//vertex input controls how to read vertices from vertex buffers. We aren't using it yet
 	pipelineBuilder.vertexInputInfo = vkinit::vertexInputStateCreateInfo();
@@ -663,27 +655,11 @@ void VulkanEngine::initPipeline()
 	//a single blend attachment with no blending and writing to RGBA
 	pipelineBuilder.colorBlendAttachment = vkinit::colorBlendAttachmentState();
 
-	//use the triangle layout we created
-	pipelineBuilder.pipelineLayout = trianglePipelineLayout;
-
 	// enable depth test
 	pipelineBuilder.depthStencil = vkinit::depthStencilCreateInfo(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
-	//finally build the pipeline
-	trianglePipeline = pipelineBuilder.buildPipeline(device, renderPass);
-
-	// other shader
-
 	//clear the shader stages for the builder
 	pipelineBuilder.shaderStages.clear();
-
-	//add the other shaders
-	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, redTriangleVertShader));
-
-	pipelineBuilder.shaderStages.push_back(vkinit::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, redTriangleFragShader));
-
-	//build the red triangle pipeline
-	redTrianglePipeline = pipelineBuilder.buildPipeline(device, renderPass);
 
 
 
@@ -739,18 +715,12 @@ void VulkanEngine::initPipeline()
 
 	//deleting all of the vulkan shaders
 	vkDestroyShaderModule(device, meshVertShader, nullptr);
-	vkDestroyShaderModule(device, redTriangleVertShader, nullptr);
 	vkDestroyShaderModule(device, redTriangleFragShader, nullptr);
-	vkDestroyShaderModule(device, triangleFragShader, nullptr);
-	vkDestroyShaderModule(device, triangleVertexShader, nullptr);
 	vkDestroyShaderModule(device, computeShader, nullptr);
 
 	// destroy the 2 pipelines we have created
-	deletionQueue.pushFunction([=]() { vkDestroyPipeline(device, redTrianglePipeline, nullptr);
-									   vkDestroyPipeline(device, trianglePipeline, nullptr);
-									   vkDestroyPipeline(device, meshPipeline, nullptr);
+	deletionQueue.pushFunction([=]() { vkDestroyPipeline(device, meshPipeline, nullptr);
 									   // destroy the pipeline layout that they use
-									   vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr); 
 									   vkDestroyPipelineLayout(device, meshPipelineLayout, nullptr);});
 }
 

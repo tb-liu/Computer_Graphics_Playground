@@ -80,6 +80,8 @@ private:
 	// vulkan command buffer & graphics queue
 	VkQueue graphicsQueue; //queue we will submit to
 	uint32_t graphicsQueueFamily; //family of that queue
+	VkQueue computeQueue;
+	uint32_t computeQueueFramily;
 	// TODO: add compute
 
 	// render pass
@@ -91,14 +93,12 @@ private:
 	VkDescriptorSet computeDescriptors;
 
 	// Sync Object
-	RingBuffer ringBuffer;
+	RingBuffer graphicsQueueRingBuffer;
+	RingBuffer computeQueueRingBuffer;
 
 	// pipeline related things
 	// TODO: all these will go into render objects array
 	VkPipelineLayout computePipelineLayout;
-	VkPipelineLayout trianglePipelineLayout;
-	VkPipeline trianglePipeline;
-	VkPipeline redTrianglePipeline;
 	VkPipeline computePipeline;
 
 
