@@ -429,7 +429,7 @@ void VulkanEngine::initVulkan()
 	graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
-	// get a compute queue
+	// get a compute queue, this will error out if does not support compute shader
 	computeQueue = vkbDevice.get_queue(vkb::QueueType::compute).value();
 	computeQueueFramily = vkbDevice.get_queue_index(vkb::QueueType::compute).value();
 
