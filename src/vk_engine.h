@@ -94,8 +94,6 @@ private:
 	// Sync Object
 	RingBuffer graphicsQueueRingBuffer;
 	RingBuffer computeQueueRingBuffer;
-	// store the previous graphics sync object ptr
-	VkSemaphore prevSync;
 
 	// deletion queue
 	DeletionQueue deletionQueue;

@@ -87,7 +87,7 @@ void VulkanEngine::shutdown()
 
 void VulkanEngine::update(float dt)
 {
-	int frameIndex = CURRENT_FRAME = CURRENT_FRAME++ % MAX_FRAMES_IN_FLIGHT;
+	CURRENT_FRAME = CURRENT_FRAME++ % MAX_FRAMES_IN_FLIGHT;
 	// acqure next sync objects
 	SyncObject * nextSync = graphicsQueueRingBuffer.getNextObject();
 	SyncObject* nextComputeSync = computeQueueRingBuffer.getNextObject();
@@ -121,14 +121,11 @@ void VulkanEngine::update(float dt)
 
 
 	VK_CHECK(vkEndCommandBuffer(computeCmd));
-	std::array<VkSemaphore, 2> computeWaitSemaphores = { nextSync->presentSemaphore, nextComputeSync->renderSemaphore };
-	std::array<VkSemaphore, 1> computeSignalSemaphores = { nextSync->renderSemaphore };
-	std::array<VkPipelineStageFlags, 1> computeWaitStage = { VK_PIPELINE_STAGE_VERTEX_SHADER_BIT};
+	std::array<VkSemaphore, 1> computeSignalSemaphores = { nextComputeSync->renderSemaphore };
+	VkPipelineStageFlags computeWaitStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 	VkSubmitInfo computeSubmit = {};
 	computeSubmit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	computeSubmit.pWaitDstStageMask = computeWaitStage.data();
-	computeSubmit.waitSemaphoreCount = computeWaitSemaphores.size();
-	computeSubmit.pWaitSemaphores = computeWaitSemaphores.data();
+	computeSubmit.pWaitDstStageMask = &computeWaitStage;
 	computeSubmit.signalSemaphoreCount = computeSignalSemaphores.size();
 	computeSubmit.pSignalSemaphores = computeSignalSemaphores.data();
 	computeSubmit.commandBufferCount = 1;
@@ -142,7 +139,7 @@ void VulkanEngine::update(float dt)
 	VK_CHECK(vkResetFences(device, 1, &nextSync->renderFence));
 	//request image from the swapchain, one second timeout
 	uint32_t swapchainImageIndex;
-	VK_CHECK(vkAcquireNextImageKHR(device, swapchain, ONE_SECOND, nextSync->presentSemaphore, nullptr, &swapchainImageIndex));
+	VK_CHECK(vkAcquireNextImageKHR(device, swapchain, ONE_SECOND, nextSync->renderSemaphore, nullptr, &swapchainImageIndex));
 	VK_CHECK(vkResetCommandBuffer(nextSync->mainCommandBuffer, 0));
 
 	//naming it cmd for shorter writing
@@ -233,13 +230,13 @@ void VulkanEngine::update(float dt)
 	//we will signal the _renderSemaphore, to signal that rendering has finished
 
 	//nextSync->presentSemaphore we wait for get the current framebuffer, nextComputeSync->renderSemaphore wair for compute is done
-	std::array<VkSemaphore, 2> waitSemaphores = { nextSync->presentSemaphore, nextComputeSync->renderSemaphore };
-	std::array<VkSemaphore, 2> signalSemaphores = { nextSync->presentSemaphore, nextSync->renderSemaphore };
+	std::array<VkSemaphore, 2> waitSemaphores = { nextComputeSync->renderSemaphore, nextSync->renderSemaphore };
+	std::array<VkSemaphore, 1> signalSemaphores = { nextSync->presentSemaphore };
+	VkPipelineStageFlags graphicsWaitStage[] = { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSubmitInfo submit = {};
 	submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit.pNext = nullptr;
-	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	submit.pWaitDstStageMask = &waitStage;
+	submit.pWaitDstStageMask = graphicsWaitStage;
 	submit.waitSemaphoreCount = waitSemaphores.size();
 	submit.pWaitSemaphores = waitSemaphores.data();
 	submit.signalSemaphoreCount = signalSemaphores.size();
@@ -247,8 +244,6 @@ void VulkanEngine::update(float dt)
 	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &cmd;
 
-
-	prevSync = nextSync->renderSemaphore;
 	//submit command buffer to the queue and execute it.
 	// _renderFence will now block until the graphic commands finish execution
 	VK_CHECK(vkQueueSubmit(graphicsQueue, 1, &submit, nextSync->renderFence));
