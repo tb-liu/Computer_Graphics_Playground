@@ -100,8 +100,6 @@ void VulkanEngine::update(float dt)
 	VK_CHECK(vkResetFences(device, 1, &nextComputeSync->renderFence));
 
 	VkCommandBuffer computeCmd = nextComputeSync->mainCommandBuffer;
-
-	//TODO: add begin compute cmd recording here
 	VkCommandBufferBeginInfo computeCmdBeginInfo = {};
 	computeCmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	computeCmdBeginInfo.pNext = nullptr;
