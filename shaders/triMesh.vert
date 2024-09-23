@@ -1,7 +1,6 @@
 #version 450
-
-const int MAX_INSTANCE = 4096;
-
+#extension GL_GOOGLE_include_directive : require
+#include "header.glsl"
 layout (location = 0) in vec3 vPosition;
 layout (location = 1) in vec3 vNormal;
 layout (location = 2) in vec3 vColor;
@@ -16,14 +15,13 @@ layout( set = 0, binding = 0 ) uniform CameraBuffer
 	mat4 model;
 } cameraData;
 
-layout(std140, binding = 1) buffer storageBuffer {
-	vec4 pos[MAX_INSTANCE];
-    vec4 velocity[MAX_INSTANCE];
+layout(std430, binding = 1) buffer storageBuffer {
+	Particle particles[MAX_INSTANCE];
 } ObjectData;
 
 void main()
 {
-	vec4 pos = ObjectData.pos[gl_InstanceIndex] + cameraData.model * vec4(vPosition, 1);
+	vec4 pos = ObjectData.particles[gl_InstanceIndex].pos + cameraData.model * vec4(vPosition, 1);
 	gl_Position = cameraData.proj * cameraData.view * pos;
 	outColor = vColor;
 }

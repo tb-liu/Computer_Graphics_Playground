@@ -196,7 +196,7 @@ void VulkanEngine::update(float dt)
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObjects[0].pipelineSet->pipeline);
 		//bind the mesh vertex buffer with offset 0
 		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(cmd, 0, 1, &renderObjects[0].mesh->vertexBuffer.buffer, &offset);
+		//vkCmdBindVertexBuffers(cmd, 0, 1, &renderObjects[0].mesh->vertexBuffer.buffer, &offset);
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObjects[0].pipelineSet->pipelineLayout, 0, 1, &vertexShaderDescriptors[CURRENT_FRAME], 0, nullptr);
 
 		//and copy it to the buffer
@@ -208,13 +208,13 @@ void VulkanEngine::update(float dt)
 		vmaUnmapMemory(allocator, buffers[CURRENT_FRAME].allocation);
 
 		//we can now draw the mesh
-		vkCmdDraw(cmd, renderObjects[0].mesh->vertices.size(), 1, 0, 0);
+		// vkCmdDraw(cmd, renderObjects[0].mesh->vertices.size(), 1, 0, 0);
 
 		// draw the sphere
 		vkCmdBindVertexBuffers(cmd, 0, 1, &renderObjects[1].mesh->vertexBuffer.buffer, &offset);
 		vkCmdBindIndexBuffer(cmd, renderObjects[1].mesh->indiceBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(renderObjects[1].mesh->indices.size()), 5, 0, 0, 0);
+		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(renderObjects[1].mesh->indices.size()), MAX_INSTANCE, 0, 0, 0);
 
 	}
 	
@@ -802,12 +802,12 @@ void VulkanEngine::resetParticleInfo(VkCommandPool cmdPool, VkQueue queue)
 		float inclination = std::acos(1.0f - 2.0f * t) * 5;
 		float azimuth = angleIncrement * i;
 
-		buffer.pos[i].x = std::sin(inclination) * std::cos(azimuth);
-		buffer.pos[i].y = std::sin(inclination) * std::sin(azimuth);
-		buffer.pos[i].z = std::cos(inclination);
-		buffer.pos[i].w = 1.f;
+		buffer.particles[i].pos.x = std::sin(inclination) * std::cos(azimuth);
+		buffer.particles[i].pos.y = std::sin(inclination) * std::sin(azimuth);
+		buffer.particles[i].pos.z = std::cos(inclination);
+		buffer.particles[i].pos.w = 1.f;
 
-		buffer.vel[i] = glm::vec4(0, -9.8f, 0, 0);
+		buffer.particles[i].velocity = glm::vec4(0, -9.8f, 0, 0);
 	}
 
 	// create a staging buffer

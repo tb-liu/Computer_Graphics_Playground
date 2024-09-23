@@ -1,5 +1,7 @@
 #version 450
-const int MAX_INSTANCE = 4096;
+#extension GL_GOOGLE_include_directive : require
+#include "header.glsl"
+
 
 layout(local_size_x = 256) in; // Define the number of threads per workgroup
 
@@ -7,9 +9,8 @@ layout(push_constant) uniform PushConstants {
     float dt;
 } pc;
 
-layout(std140, binding = 0) buffer storageBuffer {
-	vec4 pos[MAX_INSTANCE];
-    vec4 velocity[MAX_INSTANCE];
+layout(std430, binding = 0) buffer storageBuffer {
+	Particle particles[MAX_INSTANCE];
 } ObjectData;
 
 void main()
@@ -22,12 +23,12 @@ void main()
     uint global_id = group_id * group_size + local_id;
 
     // Ensure we do not access out of bounds
-    if (global_id >= ObjectData.pos.length()) return;
+    if (global_id >= ObjectData.particles[global_id].pos.length()) return;
 
     // Access the portion of the array specific to this workgroup
-    vec4 currentPosition = ObjectData.pos[global_id];
-    vec4 currentVelocity = ObjectData.velocity[global_id];
+    vec4 currentPosition = ObjectData.particles[global_id].pos;
+    vec4 currentVelocity = ObjectData.particles[global_id].velocity;
 
     // Simple physics update
-    ObjectData.pos[global_id].xyz += currentVelocity.xyz * pc.dt;
+    ObjectData.particles[global_id].pos.xyz += currentVelocity.xyz * pc.dt;
 }

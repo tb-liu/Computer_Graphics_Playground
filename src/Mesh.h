@@ -7,6 +7,13 @@
 
 const int MAX_INSTANCE = 4096; // max particles for now
 
+struct particle
+{
+    glm::vec4 pos, velocity, force;
+    float density;
+    float pad[3];
+};
+
 struct VertexInputDescription
 {
     std::vector<VkVertexInputBindingDescription> bindings;
@@ -52,8 +59,7 @@ struct RenderObject
 // for particles information
 struct StorageBuffer
 {
-    std::array<glm::vec4, MAX_INSTANCE> pos;
-    std::array<glm::vec4, MAX_INSTANCE> vel;
+    std::array<particle, MAX_INSTANCE> particles;
 
     // store the info need to allocate buffer for this struct
     // also not contribute to the class size
