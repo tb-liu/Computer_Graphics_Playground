@@ -23,7 +23,7 @@ void main()
     uint global_id = group_id * group_size + local_id;
 
     // Ensure we do not access out of bounds
-    if (global_id >= ObjectData.particles[global_id].pos.length()) return;
+    if (global_id >= MAX_INSTANCE) return;
 
     // Access the portion of the array specific to this workgroup
     vec4 currentPosition = ObjectData.particles[global_id].pos;
