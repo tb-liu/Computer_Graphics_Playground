@@ -114,7 +114,7 @@ void VulkanEngine::update(float dt)
 	vkCmdPushConstants(computeCmd, getPipelineSet("ComputePipeline")->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &dt);
 
 	// Dispatch the compute shader
-	vkCmdDispatch(computeCmd, 4096 / 256 + 1, 1, 1);
+	vkCmdDispatch(computeCmd, MAX_INSTANCE / THREADS_PER_GROUP + 1, 1, 1);
 	
 
 
@@ -143,6 +143,7 @@ void VulkanEngine::update(float dt)
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = nextSync->mainCommandBuffer;
 
+	// TODO: move this to compute shader?
 	if (resetParticle)
 	{
 		resetParticle = false;
@@ -703,8 +704,8 @@ void VulkanEngine::initPipeline()
 	recordPipelineSet(meshPipeline, meshPipelineLayout, "GraphicsPipeline");
 
 	// pipeline for compute shader
-	VkShaderModule computeShader;
-	loadShaderWrapper("computeShader.comp", &computeShader);
+	VkShaderModule densityComputeShader;
+	loadShaderWrapper("densityCompute.comp", &densityComputeShader);
 
 	VkPipelineLayout computePipelineLayout;
 	VkPipeline computePipeline;
@@ -729,7 +730,7 @@ void VulkanEngine::initPipeline()
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	pipelineInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-	pipelineInfo.stage.module = computeShader;
+	pipelineInfo.stage.module = densityComputeShader;
 	pipelineInfo.stage.pName = "main"; // Entry point in the shader
 	pipelineInfo.layout = computePipelineLayout; // Pipeline layout
 
@@ -740,7 +741,7 @@ void VulkanEngine::initPipeline()
 	//deleting all of the vulkan shaders
 	vkDestroyShaderModule(device, meshVertShader, nullptr);
 	vkDestroyShaderModule(device, redTriangleFragShader, nullptr);
-	vkDestroyShaderModule(device, computeShader, nullptr);
+	vkDestroyShaderModule(device, densityComputeShader, nullptr);
 
 	// destroy the pipelines we have created
 	deletionQueue.pushFunction([=]() { vkDestroyPipeline(device, meshPipeline, nullptr);

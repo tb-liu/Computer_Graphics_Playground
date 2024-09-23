@@ -103,6 +103,7 @@ private:
 
 	// mesh objects
 	std::vector<RenderObject> renderObjects;
+	// TODO: add two more pipeline, one for update particle position, one for construct water surface
 	std::unordered_map<std::string, PipelineSet> pipelineSets;
 	std::unordered_map<std::string, Mesh> meshes;
 

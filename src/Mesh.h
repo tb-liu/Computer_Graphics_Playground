@@ -6,8 +6,9 @@
 #include "vk_types.h"
 
 const int MAX_INSTANCE = 4096; // max particles for now
+const int THREADS_PER_GROUP = 256;
 
-struct particle
+struct Particle
 {
     glm::vec4 pos, velocity, force;
     float density;
@@ -59,7 +60,7 @@ struct RenderObject
 // for particles information
 struct StorageBuffer
 {
-    std::array<particle, MAX_INSTANCE> particles;
+    std::array<Particle, MAX_INSTANCE> particles;
 
     // store the info need to allocate buffer for this struct
     // also not contribute to the class size
