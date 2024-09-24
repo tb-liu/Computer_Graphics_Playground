@@ -23,5 +23,5 @@ void main()
 {
 	vec4 pos = ObjectData.particles[gl_InstanceIndex].pos + cameraData.model * vec4(vPosition, 1);
 	gl_Position = cameraData.proj * cameraData.view * pos;
-	outColor = vColor;
+	outColor = vec3(1.0, 0, 0);
 }

@@ -43,7 +43,7 @@ void main()
     vec3 currentVelocity = ObjectData.particles[global_id].velocity.xyz;
 
     // reset density and force
-    ObjectData.particles[global_id].density = 0.0;
+    ObjectData.particles[global_id].density = restDensity;
     ObjectData.particles[global_id].force = vec4(0.0);
 
     // compute density for particles
@@ -65,6 +65,5 @@ void main()
 
     }
 
-    // Simple physics update
-    ObjectData.particles[global_id].pos.xyz += currentVelocity.xyz * pc.dt;
+    
 }

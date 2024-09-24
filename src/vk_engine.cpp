@@ -110,6 +110,7 @@ void VulkanEngine::update(float dt)
 
 	vkCmdBindPipeline(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("DensityComputePipeline")->pipeline);
 	vkCmdBindDescriptorSets(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("DensityComputePipeline")->pipelineLayout, 0, 1, &computeDescriptors, 0, nullptr);
+	float smalldt = 0.0001f;
 	//upload the matrix to the GPU via push constants
 	vkCmdPushConstants(computeCmd, getPipelineSet("DensityComputePipeline")->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &dt);
 
@@ -126,7 +127,7 @@ void VulkanEngine::update(float dt)
 	vkCmdBindPipeline(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("ForceComputePipeline")->pipeline);
 	vkCmdBindDescriptorSets(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("ForceComputePipeline")->pipelineLayout, 0, 1, &computeDescriptors, 0, nullptr);
 	//upload the matrix to the GPU via push constants
-	vkCmdPushConstants(computeCmd, getPipelineSet("ForceComputePipeline")->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &dt);
+	//vkCmdPushConstants(computeCmd, getPipelineSet("ForceComputePipeline")->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &dt);
 
 	// Dispatch the compute shader
 	vkCmdDispatch(computeCmd, MAX_INSTANCE / THREADS_PER_GROUP + 1, 1, 1);
@@ -174,8 +175,7 @@ void VulkanEngine::update(float dt)
 
 	//make a clear-color from frame number. This will flash with a 120*pi frame period.
 	VkClearValue clearValue;
-	float flash = abs(sin(frameNumber / 120.f));
-	clearValue.color = { { 0.0f, 0.0f, flash, 1.0f } };
+	clearValue.color = { { 0.0f, 0.5f, 0.0f, 1.0f } };
 
 	//clear depth at 1
 	VkClearValue depthClear;
@@ -830,7 +830,7 @@ void VulkanEngine::resetParticleInfo(VkCommandPool cmdPool, VkQueue queue)
 		buffer.particles[i].pos.z = std::cos(inclination);
 		buffer.particles[i].pos.w = 1.f;
 
-		buffer.particles[i].velocity = glm::vec4(0, -9.8f, 0, 0);
+		buffer.particles[i].velocity = glm::vec4(0, 0, 0, 0);
 	}
 
 	// create a staging buffer
