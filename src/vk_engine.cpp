@@ -108,6 +108,13 @@ void VulkanEngine::update(float dt)
 
 	VK_CHECK(vkBeginCommandBuffer(computeCmd, &computeCmdBeginInfo));
 
+	// TODO: move this to compute shader?
+	if (resetParticle)
+	{
+		resetParticle = false;
+		resetParticleInfo(nextComputeSync->commandPool, computeQueue);
+	}
+
 	// compute density
 	vkCmdBindPipeline(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("DensityComputePipeline")->pipeline);
 	vkCmdBindDescriptorSets(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("DensityComputePipeline")->pipelineLayout, 0, 1, &computeDescriptors, 0, nullptr);
@@ -161,12 +168,7 @@ void VulkanEngine::update(float dt)
 	//naming it cmd for shorter writing
 	VkCommandBuffer cmd = nextSync->mainCommandBuffer;
 
-	// TODO: move this to compute shader?
-	if (resetParticle)
-	{
-		resetParticle = false;
-		resetParticleInfo(nextSync->commandPool, graphicsQueue);
-	}
+	
 
 	//begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
 	VkCommandBufferBeginInfo cmdBeginInfo = {};
@@ -902,8 +904,8 @@ void VulkanEngine::copyBuffer(VkCommandPool cmdPool, VkQueue queue,VkBuffer srcB
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
 
-	vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(graphicsQueue);
+	vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(queue);
 
 	vkFreeCommandBuffers(device, cmdPool, 1, &commandBuffer);
 }

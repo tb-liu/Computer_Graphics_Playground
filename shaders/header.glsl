@@ -13,10 +13,10 @@ struct Particle
 
 // if only change this, remember manually recompile shaders
 
-const int MAX_INSTANCE = 4096;
+const int MAX_INSTANCE = 8192;
 const int THREADS_PER_GROUP = 256;
 // SPH parameters
-const float particleMass = 1.0;           // Mass of each particle
+const float particleMass = 0.2;           // Mass of each particle
 const float smoothingLength = 1.0;        // Smoothing length (h)
 const float stiffness = 980.0;           // Gas stiffness constant (k)
 const float restDensity = 980.0;         // Rest density of the fluid (ρ₀)
