@@ -12,30 +12,6 @@ float poly6Kernel(float r, float h)
     return result;
 }
 
-// Spiky kernel gradient for pressure force
-vec3 spikyKernelGradient(vec3 rVec, float h) 
-{
-    float r = length(rVec);
-    vec3 result = vec3(0.0);
-
-    float hr = h - r;
-    float coefficient = -45.0 / (3.14159265359 * pow(h, 6.0));
-    result = coefficient * (hr * hr) * (rVec / r);
-
-    return result;
-}
-
-// Viscosity kernel Laplacian for viscosity force
-float viscosityKernelLaplacian(float r, float h) 
-{
-    float result = 0.0;
-
-    float coefficient = 45.0 / (3.14159265359 * pow(h, 6.0));
-    result = coefficient * (h - r);
-    
-    return result;
-}
-
 
 
 layout(local_size_x = THREADS_PER_GROUP) in; // Define the number of threads per workgroup

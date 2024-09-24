@@ -108,15 +108,28 @@ void VulkanEngine::update(float dt)
 
 	VK_CHECK(vkBeginCommandBuffer(computeCmd, &computeCmdBeginInfo));
 
-	vkCmdBindPipeline(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("ComputePipeline")->pipeline);
-	vkCmdBindDescriptorSets(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("ComputePipeline")->pipelineLayout, 0, 1, &computeDescriptors, 0, nullptr);
+	vkCmdBindPipeline(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("DensityComputePipeline")->pipeline);
+	vkCmdBindDescriptorSets(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("DensityComputePipeline")->pipelineLayout, 0, 1, &computeDescriptors, 0, nullptr);
 	//upload the matrix to the GPU via push constants
-	vkCmdPushConstants(computeCmd, getPipelineSet("ComputePipeline")->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &dt);
+	vkCmdPushConstants(computeCmd, getPipelineSet("DensityComputePipeline")->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &dt);
 
 	// Dispatch the compute shader
 	vkCmdDispatch(computeCmd, MAX_INSTANCE / THREADS_PER_GROUP + 1, 1, 1);
 	
+	VkMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
+	vkCmdPipelineBarrier(computeCmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+
+	vkCmdBindPipeline(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("ForceComputePipeline")->pipeline);
+	vkCmdBindDescriptorSets(computeCmd, VK_PIPELINE_BIND_POINT_COMPUTE, getPipelineSet("ForceComputePipeline")->pipelineLayout, 0, 1, &computeDescriptors, 0, nullptr);
+	//upload the matrix to the GPU via push constants
+	vkCmdPushConstants(computeCmd, getPipelineSet("ForceComputePipeline")->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float), &dt);
+
+	// Dispatch the compute shader
+	vkCmdDispatch(computeCmd, MAX_INSTANCE / THREADS_PER_GROUP + 1, 1, 1);
 
 	VK_CHECK(vkEndCommandBuffer(computeCmd));
 	std::array<VkSemaphore, 1> computeSignalSemaphores = { nextComputeSync->renderSemaphore };
@@ -707,8 +720,12 @@ void VulkanEngine::initPipeline()
 	VkShaderModule densityComputeShader;
 	loadShaderWrapper("densityCompute.comp", &densityComputeShader);
 
-	VkPipelineLayout computePipelineLayout;
-	VkPipeline computePipeline;
+	VkShaderModule forceComputeShader;
+	loadShaderWrapper("forceCompute.comp", &forceComputeShader);
+
+	VkPipelineLayout densityComputePipelineLayout;
+	VkPipeline densityComputePipeline;
+	VkPipeline forceComputePipeline;
 
 	// build the compute pipeline
 	VkPipelineLayoutCreateInfo computePipelineLayoutInfo = vkinit::pipelineLayoutCreateInfo();
@@ -723,7 +740,7 @@ void VulkanEngine::initPipeline()
 	computePipelineLayoutInfo.pPushConstantRanges = &pushConstant;
 	computePipelineLayoutInfo.pushConstantRangeCount = 1;
 
-	VK_CHECK(vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &computePipelineLayout));
+	VK_CHECK(vkCreatePipelineLayout(device, &computePipelineLayoutInfo, nullptr, &densityComputePipelineLayout));
 
 	// compute pipeline info
 	VkComputePipelineCreateInfo pipelineInfo{};
@@ -732,22 +749,27 @@ void VulkanEngine::initPipeline()
 	pipelineInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 	pipelineInfo.stage.module = densityComputeShader;
 	pipelineInfo.stage.pName = "main"; // Entry point in the shader
-	pipelineInfo.layout = computePipelineLayout; // Pipeline layout
+	pipelineInfo.layout = densityComputePipelineLayout; // Pipeline layout
 
-	VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &computePipeline));
-	recordPipelineSet(computePipeline, computePipelineLayout, "ComputePipeline");
+	VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &densityComputePipeline));
+	recordPipelineSet(densityComputePipeline, densityComputePipelineLayout, "DensityComputePipeline");
 
+	pipelineInfo.stage.module = forceComputeShader;
+	VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &forceComputePipeline));
+	recordPipelineSet(forceComputePipeline, densityComputePipelineLayout, "ForceComputePipeline");
 
 	//deleting all of the vulkan shaders
 	vkDestroyShaderModule(device, meshVertShader, nullptr);
 	vkDestroyShaderModule(device, redTriangleFragShader, nullptr);
 	vkDestroyShaderModule(device, densityComputeShader, nullptr);
+	vkDestroyShaderModule(device, forceComputeShader, nullptr);
 
 	// destroy the pipelines we have created
 	deletionQueue.pushFunction([=]() { vkDestroyPipeline(device, meshPipeline, nullptr);
-									   vkDestroyPipeline(device, computePipeline, nullptr);
+									   vkDestroyPipeline(device, densityComputePipeline, nullptr);
+									   vkDestroyPipeline(device, forceComputePipeline, nullptr);
 									   vkDestroyPipelineLayout(device, meshPipelineLayout, nullptr);
-									   vkDestroyPipelineLayout(device, computePipelineLayout, nullptr); });
+									   vkDestroyPipelineLayout(device, densityComputePipelineLayout, nullptr); });
 }
 
 

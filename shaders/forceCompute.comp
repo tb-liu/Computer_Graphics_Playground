@@ -1,0 +1,95 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "header.glsl"
+
+
+// Spiky kernel gradient for pressure force
+vec3 spikyKernelGradient(vec3 rVec, float h) 
+{
+    float r = length(rVec);
+    vec3 result = vec3(0.0);
+
+    float hr = h - r;
+    float coefficient = -45.0 / (3.14159265359 * pow(h, 6.0));
+    result = coefficient * (hr * hr) * (rVec / r);
+
+    return result;
+}
+
+// Viscosity kernel Laplacian for viscosity force
+float viscosityKernelLaplacian(float r, float h) 
+{
+    float result = 0.0;
+
+    float coefficient = 45.0 / (3.14159265359 * pow(h, 6.0));
+    result = coefficient * (h - r);
+    
+    return result;
+}
+
+
+
+layout(local_size_x = THREADS_PER_GROUP) in; // Define the number of threads per workgroup
+
+layout(push_constant) uniform PushConstants {
+    float dt;
+} pc;
+
+layout(std430, binding = 0) buffer storageBuffer {
+	Particle particles[MAX_INSTANCE];
+} ObjectData;
+
+
+// TODO: currently is brute force calculation, need to optimize
+void main()
+{
+    // TODO: move closer particles to same group 
+    uint local_id = gl_LocalInvocationID.x;
+    uint group_id = gl_WorkGroupID.x;  // Workgroup ID on the x dimension
+    uint group_size = gl_WorkGroupSize.x;  // Number of threads per workgroup
+
+    // Calculate global index based on workgroup ID and local ID within the workgroup
+    uint global_id = group_id * group_size + local_id;
+
+    // Ensure we do not access out of bounds
+    if (global_id >= MAX_INSTANCE) return;
+
+    vec3 currentPosition = ObjectData.particles[global_id].pos.xyz;
+    vec3 currentVelocity = ObjectData.particles[global_id].velocity.xyz;
+
+    // reset force
+    ObjectData.particles[global_id].force = vec4(0.0);
+    float currentPressure = stiffness * (ObjectData.particles[global_id].density - restDensity);
+    vec3 pressureForce = vec3(0.0), viscosityForce = vec3(0.0);
+    // compute pressure for particles
+    for(uint i = 0; i < MAX_INSTANCE; ++i)
+    {
+        if(global_id == i) continue; // skip the current particle
+        vec3 neighborPosition = ObjectData.particles[i].pos.xyz;
+        
+
+        vec3 rVec = currentPosition - neighborPosition;
+        float r = length(rVec);
+
+        if (r >= 0.0 && r <= smoothingLength)
+        {
+            float density = ObjectData.particles[i].density;
+            float pressure = stiffness * (density - restDensity);
+
+            // pressure force
+            vec3 kernelGrad = spikyKernelGradient(rVec, smoothingLength);
+            pressureForce -= particleMass * ((currentPressure + pressure) / (2.0 * density) * kernelGrad);
+
+            vec3 neighborVelocity = ObjectData.particles[i].velocity.xyz;
+            float laplacian = viscosityKernelLaplacian(r, smoothingLength);
+            viscosityForce += viscosity * particleMass * ((neighborVelocity - currentVelocity) / density) * laplacian;
+        }
+        
+
+    }
+
+
+    vec3 gravistyForce = vec3(0.0, ObjectData.particles[global_id].density * gravity, 0.0);
+    // write to correct particle
+    ObjectData.particles[global_id].force = vec4(pressureForce + viscosityForce + gravistyForce, 0.0);
+}
