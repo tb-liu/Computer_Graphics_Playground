@@ -92,8 +92,5 @@ void main()
     vec3 gravistyForce = vec3(0.0, ObjectData.particles[global_id].density * gravity, 0.0);
     // write to correct particle
     ObjectData.particles[global_id].force = vec4(pressureForce + viscosityForce + gravistyForce, 0.0);
-    // Simple physics update f = ma
-    vec4 acceleration = ObjectData.particles[global_id].force / particleMass;
-    ObjectData.particles[global_id].velocity += acceleration * pc.dt;
-    ObjectData.particles[global_id].pos.xyz += ObjectData.particles[global_id].velocity.xyz * pc.dt;
+   
 }

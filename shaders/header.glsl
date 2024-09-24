@@ -11,6 +11,8 @@ struct Particle
     float pad[3];
 };
 
+// if only change this, remember manually recompile shaders
+
 const int MAX_INSTANCE = 4096;
 const int THREADS_PER_GROUP = 256;
 // SPH parameters

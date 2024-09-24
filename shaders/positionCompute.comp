@@ -1,0 +1,116 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "header.glsl"
+
+
+layout(local_size_x = THREADS_PER_GROUP) in; // Define the number of threads per workgroup
+
+layout(push_constant) uniform PushConstants {
+    float dt;
+} pc;
+
+layout(std430, binding = 0) buffer storageBuffer {
+	Particle particles[MAX_INSTANCE];
+} ObjectData;
+const float restitutionCoefficient = 0.8;
+// add bounding box here
+vec3 domainMax = vec3(20, 20, 20);
+vec3 domainMin = vec3(-20, -20, -20);
+// TODO: currently is brute force calculation, need to optimize
+void main()
+{
+    // TODO: move closer particles to same group 
+    uint local_id = gl_LocalInvocationID.x;
+    uint group_id = gl_WorkGroupID.x;  // Workgroup ID on the x dimension
+    uint group_size = gl_WorkGroupSize.x;  // Number of threads per workgroup
+
+    // Calculate global index based on workgroup ID and local ID within the workgroup
+    uint global_id = group_id * group_size + local_id;
+
+    // Ensure we do not access out of bounds
+    if (global_id >= MAX_INSTANCE) return;
+
+    vec3 position = ObjectData.particles[global_id].pos.xyz;
+    vec4 velocity = ObjectData.particles[global_id].velocity;
+   
+
+
+    // Simple physics update
+    vec4 acceleration = ObjectData.particles[global_id].force / ObjectData.particles[global_id].density;
+    velocity += acceleration * pc.dt;
+    vec3 predictedPosition = velocity.xyz * pc.dt + position;
+
+     // Handle collisions with boundaries on each axis
+    for (int axis = 0; axis < 3; ++axis) {
+        float pos = position[axis];
+        float vel = velocity[axis];
+        float minBoundary = domainMin[axis];
+        float maxBoundary = domainMax[axis];
+
+        // Check for collision with lower boundary
+        if (predictedPosition[axis] < minBoundary) {
+            // Time to collision
+            float timeCollision = (minBoundary - pos) / vel;
+
+            if (timeCollision >= 0.0 && timeCollision <= pc.dt) {
+                // Update position to collision point
+                pos += vel * timeCollision;
+
+                // Reflect velocity
+                vel = -vel * restitutionCoefficient;
+
+                // Remaining time after collision
+                float dtRemaining = pc.dt - timeCollision;
+
+                // Update position after collision
+                pos += vel * dtRemaining;
+
+                // Correct for any penetration due to numerical errors
+                if (pos < minBoundary) {
+                    pos = minBoundary + (minBoundary - pos);
+                }
+            } else {
+                // No collision within time step
+                pos = predictedPosition[axis];
+            }
+        }
+        // Check for collision with upper boundary
+        else if (predictedPosition[axis] > maxBoundary) {
+            // Time to collision
+            float timeCollision = (maxBoundary - pos) / vel;
+
+            if (timeCollision >= 0.0 && timeCollision <= pc.dt) {
+                // Update position to collision point
+                pos += vel * timeCollision;
+
+                // Reflect velocity
+                vel = -vel * restitutionCoefficient;
+
+                // Remaining time after collision
+                float dtRemaining = pc.dt - timeCollision;
+
+                // Update position after collision
+                pos += vel * dtRemaining;
+
+                // Correct for any penetration due to numerical errors
+                if (pos > maxBoundary) {
+                    pos = maxBoundary - (pos - maxBoundary);
+                }
+            } else {
+                // No collision within time step
+                pos = predictedPosition[axis];
+            }
+        }
+        // No collision
+        else {
+            pos = predictedPosition[axis];
+        }
+
+        // Update position and velocity arrays
+        position[axis] = pos;
+        velocity[axis] = vel;
+    }
+
+    ObjectData.particles[global_id].velocity = velocity;
+    ObjectData.particles[global_id].pos.xyz = position;
+}
