@@ -13,7 +13,7 @@ struct Particle
 
 // if only change this, remember manually recompile shaders
 
-const int MAX_INSTANCE = 8192;
+const int MAX_INSTANCE = 8192*2;
 const int THREADS_PER_GROUP = 256;
 // SPH parameters
 const float particleMass = 0.2;           // Mass of each particle

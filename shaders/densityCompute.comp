@@ -26,6 +26,7 @@ layout(std430, binding = 0) buffer storageBuffer {
 
 
 // TODO: currently is brute force calculation, need to optimize
+// TODO: add ghost particles at boundry
 void main()
 {
     // TODO: move closer particles to same group 

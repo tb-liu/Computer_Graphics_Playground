@@ -831,23 +831,12 @@ void VulkanEngine::initComputeBuffer()
 void VulkanEngine::resetParticleInfo(VkCommandPool cmdPool, VkQueue queue)
 {
 	// TODO: move the init particles pos to GPU?
-	StorageBuffer buffer = {};
+	// TODO: change this to heap, large array cause stack overflow
+	// StorageBuffer buffer = {};
 	float goldenRatio = (1.0f + std::sqrt(5.0f)) / 2.0f;
 	float angleIncrement = 2.0f * M_PI * goldenRatio;
 
-	for (size_t i = 0; i < MAX_INSTANCE; i++)
-	{
-		float t = float(i) / float(MAX_INSTANCE);
-		float inclination = std::acos(1.0f - 2.0f * t) * 5;
-		float azimuth = angleIncrement * i;
-
-		buffer.particles[i].pos.x = std::sin(inclination) * std::cos(azimuth);
-		buffer.particles[i].pos.y = std::sin(inclination) * std::sin(azimuth);
-		buffer.particles[i].pos.z = std::cos(inclination);
-		buffer.particles[i].pos.w = 1.f;
-
-		buffer.particles[i].velocity = glm::vec4(0, 0, 0, 0);
-	}
+	
 
 	// create a staging buffer
 	VkBuffer stagingBuffer;
@@ -866,11 +855,24 @@ void VulkanEngine::resetParticleInfo(VkCommandPool cmdPool, VkQueue queue)
 	// Map the buffer and copy the initial data
 	void* data;
 	vmaMapMemory(allocator, stagingBufferAllocation, &data);
-	memcpy(data, &buffer, sizeof(StorageBuffer));
+	StorageBuffer* buffer = reinterpret_cast<StorageBuffer*>(data);
+	for (size_t i = 0; i < MAX_INSTANCE; i++)
+	{
+		float t = float(i) / float(MAX_INSTANCE);
+		float inclination = std::acos(1.0f - 2.0f * t) * 5;
+		float azimuth = angleIncrement * i;
+
+		buffer->particles[i].pos.x = std::sin(inclination) * std::cos(azimuth);
+		buffer->particles[i].pos.y = std::sin(inclination) * std::sin(azimuth);
+		buffer->particles[i].pos.z = std::cos(inclination);
+		buffer->particles[i].pos.w = 1.f;
+
+		buffer->particles[i].velocity = glm::vec4(0, 0, 0, 0);
+	}
 	vmaUnmapMemory(allocator, stagingBufferAllocation);
 
 	// upload the data to gpu
-	copyBuffer(cmdPool, queue, stagingBuffer, buffer.storageBuffer.buffer, sizeof(StorageBuffer));
+	copyBuffer(cmdPool, queue, stagingBuffer, StorageBuffer::storageBuffer.buffer, sizeof(StorageBuffer));
 
 	vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
 }
