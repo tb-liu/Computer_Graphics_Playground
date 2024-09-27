@@ -66,5 +66,45 @@ void main()
 
     }
 
-    
+    // Simulate mirror particles for each boundary
+    for (int axis = 0; axis < 3; ++axis) 
+    {
+        float pos = currentPosition[axis];
+        float minBoundary = domainMin[axis];
+        float maxBoundary = domainMax[axis];
+
+        // Check for proximity to min boundary
+        if (pos - minBoundary < smoothingLength) 
+        {
+            float mirrorPos = 2.0 * minBoundary - pos;
+            vec3 mirrorPosition = currentPosition;
+            mirrorPosition[axis] = mirrorPos;
+
+            vec3 rVec = currentPosition - mirrorPosition;
+            float r = length(rVec);
+
+            if (r <= smoothingLength) 
+            {
+                float kernelValue = poly6Kernel(r, smoothingLength);
+                ObjectData.particles[global_id].density += particleMass * kernelValue;
+            }
+        }
+
+        // Check for proximity to max boundary
+        if (maxBoundary - pos < smoothingLength) 
+        {
+            float mirrorPos = 2.0 * maxBoundary - pos;
+            vec3 mirrorPosition = currentPosition;
+            mirrorPosition[axis] = mirrorPos;
+
+            vec3 rVec = currentPosition - mirrorPosition;
+            float r = length(rVec);
+
+            if (r <= smoothingLength) 
+            {
+                float kernelValue = poly6Kernel(r, smoothingLength);
+                ObjectData.particles[global_id].density += particleMass * kernelValue;
+            }
+        }
+    }
 }

@@ -39,7 +39,7 @@ layout(std430, binding = 0) buffer storageBuffer {
 	Particle particles[MAX_INSTANCE];
 } ObjectData;
 
-
+float mirrorInfluenceScale = 0.8;
 // TODO: currently is brute force calculation, need to optimize
 void main()
 {
@@ -87,7 +87,76 @@ void main()
         
 
     }
+    // Simulate mirror particles for each boundary
+    for (int axis = 0; axis < 3; ++axis)
+    {
+        float pos = currentPosition[axis];
+        float vel = currentVelocity[axis];
+        float minBoundary = domainMin[axis];
+        float maxBoundary = domainMax[axis];
 
+        // Check for proximity to min boundary
+        if (pos - minBoundary < smoothingLength)
+        {
+            // Mirror position and velocity
+            float mirrorPos = 2.0 * minBoundary - pos;
+            vec3 mirrorPosition = currentPosition;
+            mirrorPosition[axis] = mirrorPos;
+
+            vec3 mirrorVelocity = currentVelocity;
+            mirrorVelocity[axis] = -vel; // Reflect velocity component
+
+            vec3 rVec = currentPosition - mirrorPosition;
+            float r = length(rVec);
+
+            if (r > 0.0 && r <= smoothingLength)
+            {
+                // Set properties for mirror particle
+                float mirrorDensity = restDensity;    // Use rest density for static boundary
+                float mirrorPressure = 0.0;           // No pressure for static boundary
+
+                // Pressure force
+                vec3 kernelGrad = spikyKernelGradient(rVec, smoothingLength);
+                pressureForce -= mirrorInfluenceScale * particleMass * ((currentPressure + mirrorPressure) / (2.0 * mirrorDensity)) * kernelGrad;
+
+                // Viscosity force
+                vec3 velDiff = mirrorVelocity - currentVelocity;
+                float laplacian = viscosityKernelLaplacian(r, smoothingLength);
+                viscosityForce += mirrorInfluenceScale * viscosity * particleMass * (velDiff / mirrorDensity) * laplacian;
+            }
+        }
+
+        // Check for proximity to max boundary
+        if (maxBoundary - pos < smoothingLength)
+        {
+            // Mirror position and velocity
+            float mirrorPos = 2.0 * maxBoundary - pos;
+            vec3 mirrorPosition = currentPosition;
+            mirrorPosition[axis] = mirrorPos;
+
+            vec3 mirrorVelocity = currentVelocity;
+            mirrorVelocity[axis] = -vel; // Reflect velocity component
+
+            vec3 rVec = currentPosition - mirrorPosition;
+            float r = length(rVec);
+
+            if (r > 0.0 && r <= smoothingLength)
+            {
+                // Set properties for mirror particle
+                float mirrorDensity = restDensity;    // Use rest density for static boundary
+                float mirrorPressure = 0.0;           // No pressure for static boundary
+
+                // Pressure force
+                vec3 kernelGrad = spikyKernelGradient(rVec, smoothingLength);
+                pressureForce -= mirrorInfluenceScale * particleMass * ((currentPressure + mirrorPressure) / (2.0 * mirrorDensity)) * kernelGrad;
+
+                // Viscosity force
+                vec3 velDiff = mirrorVelocity - currentVelocity;
+                float laplacian = viscosityKernelLaplacian(r, smoothingLength);
+                viscosityForce += mirrorInfluenceScale * viscosity * particleMass * (velDiff / mirrorDensity) * laplacian;
+            }
+        }
+    }
 
     vec3 gravistyForce = vec3(0.0, ObjectData.particles[global_id].density * gravity, 0.0);
     // write to correct particle

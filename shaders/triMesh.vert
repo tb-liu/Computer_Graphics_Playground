@@ -23,5 +23,8 @@ void main()
 {
 	vec4 pos = ObjectData.particles[gl_InstanceIndex].pos + cameraData.model * vec4(vPosition, 1);
 	gl_Position = cameraData.proj * cameraData.view * pos;
-	outColor = vec3(1.0, 0, 0);
+	float length = length(ObjectData.particles[gl_InstanceIndex].velocity);
+	float t = 0;
+    t = length / 30.f;
+	outColor = mix(vec3(0,0,1), vec3(1,1,1), t);
 }

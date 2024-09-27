@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include "vk_types.h"
 
-const int MAX_INSTANCE = 8192 * 2; // max particles for now
+const int MAX_INSTANCE = 1024*32; // max particles for now
 const int THREADS_PER_GROUP = 256;
 
 struct Particle

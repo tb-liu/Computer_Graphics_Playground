@@ -12,11 +12,8 @@ layout(push_constant) uniform PushConstants {
 layout(std430, binding = 0) buffer storageBuffer {
 	Particle particles[MAX_INSTANCE];
 } ObjectData;
-const float restitutionCoefficient = 0.5;
-// add bounding box here
-float boxSize = 2.5;
-vec3 domainMax = vec3(boxSize);
-vec3 domainMin = vec3(-boxSize);
+const float restitutionCoefficient = 0.2;
+
 // TODO: currently is brute force calculation, need to optimize
 void main()
 {
