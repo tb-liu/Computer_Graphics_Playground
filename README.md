@@ -1,5 +1,5 @@
 # Playground
-Where I learn Vulkan and play around with it. Currently I am trying to make a SPH compute on GPU.
+Where I learn Vulkan and play around with it. Now SPH computes on GPU. I am working on reconstructing the water surface on GPU.
 
 You need to have CMake, Vulkan, and SDL2 installed to run this project. 
 
