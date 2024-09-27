@@ -18,6 +18,7 @@ namespace GraphicsGlobal
 {
 	extern const int MAX_SHADER_COUNT;
 	extern int SELECTED_SHADER;
+	extern bool RESET_PARTICLE;
 }
 
 

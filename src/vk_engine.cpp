@@ -23,6 +23,7 @@ int CURRENT_FRAME = 0;
 
 const int GraphicsGlobal::MAX_SHADER_COUNT = 3;
 int GraphicsGlobal::SELECTED_SHADER = 2;
+bool GraphicsGlobal::RESET_PARTICLE = true;
 
 
 
@@ -109,9 +110,9 @@ void VulkanEngine::update(float dt)
 	VK_CHECK(vkBeginCommandBuffer(computeCmd, &computeCmdBeginInfo));
 
 	// TODO: move this to compute shader?
-	if (resetParticle)
+	if (GraphicsGlobal::RESET_PARTICLE)
 	{
-		resetParticle = false;
+		GraphicsGlobal::RESET_PARTICLE = false;
 		resetParticleInfo(nextComputeSync->commandPool, computeQueue);
 	}
 

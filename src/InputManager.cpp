@@ -29,11 +29,10 @@ void InputManager::update(float)
 		else if (e.type == SDL_KEYUP)
 			InputGlobal::keyboardStates[e.key.keysym.sym].released = true;
 	}
-	// if space pressed then change shader
+	// if space pressed then reset particle
 	if (InputGlobal::isKeyPressed(SDLK_SPACE))
 	{
-		GraphicsGlobal::SELECTED_SHADER += 1;
-		GraphicsGlobal::SELECTED_SHADER %= GraphicsGlobal::MAX_SHADER_COUNT;
+		GraphicsGlobal::RESET_PARTICLE = true;
 	}
 }
 
